@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="@android:color/white">
+
+    <!-- App Logo -->
+    <ImageView
+        android:id="@+id/img_logo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_gravity="center_horizontal"
+        android:src="@mipmap/ic_launcher"
+        android:contentDescription="RECREATE Logo"/>
+
+    <!-- App Tagline -->
+    <TextView
+        android:id="@+id/txt_tagline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Turning Waste Into Opportunity"
+        android:textAlignment="center"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp"
+        android:textColor="@android:color/black"/>
+
+    <!-- Scan Object Button -->
+    <Button
+        android:id="@+id/btn_scan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Scan Object"
+        android:textSize="16sp"
+        android:layout_marginTop="32dp"/>
+
+    <!-- Saved Projects Button -->
+    <Button
+        android:id="@+id/btn_saved"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Saved Projects"
+        android:textSize="16sp"
+        android:layout_marginTop="16dp"/>
+
+</LinearLayout>
