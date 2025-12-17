@@ -21,5 +21,6 @@ class HomeActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_saved).setOnClickListener {
             startActivity(Intent(this, SavedProjectsActivity::class.java))
         }
+
     }
 }

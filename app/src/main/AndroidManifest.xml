@@ -7,6 +7,9 @@
     <uses-feature
         android:name="android.hardware.camera.ar"
         android:required="true" />
+    <meta-data
+        android:name="com.google.ar.core.depth"
+        android:value="required" />
 
     <application
         android:allowBackup="true"
