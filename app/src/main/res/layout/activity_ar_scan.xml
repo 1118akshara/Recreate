@@ -4,17 +4,59 @@
 
     <fragment
         android:id="@+id/arFragment"
-        android:name="com.google.ar.sceneform.ux.ArFragment"
+        android:name="com.btech.recreate.ar.CustomArFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Move phone slowly • Tap to measure"
-        android:textColor="#FFFFFF"
-        android:background="#66000000"
-        android:padding="8dp"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_margin="16dp"/>
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#88000000">
+
+        <TextView
+            android:id="@+id/txt_object_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Object 1"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:gravity="center"/>
+
+        <TextView
+            android:id="@+id/txt_instruction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Capture Front View"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:paddingBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_capture_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Capture View"/>
+
+        <Button
+            android:id="@+id/btn_next_object"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Scan Next Object"
+            android:visibility="gone"
+            android:layout_marginTop="8dp"/>
+
+        <Button
+            android:id="@+id/btn_finish"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Finish Scan"
+            android:visibility="gone"
+            android:layout_marginTop="8dp"/>
+
+    </LinearLayout>
+
 </FrameLayout>

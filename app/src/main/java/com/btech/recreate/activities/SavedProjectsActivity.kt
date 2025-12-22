@@ -1,7 +1,8 @@
-package com.btech.recreate
+package com.btech.recreate.activities
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
 
 class SavedProjectsActivity : AppCompatActivity() {
 
