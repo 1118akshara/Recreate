@@ -20,7 +20,7 @@
 
         <!-- 🔹 Splash Screen (ONLY launcher) -->
         <activity
-            android:name=".SplashActivity"
+            android:name=".activities.SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -30,18 +30,32 @@
 
         <!-- 🔹 Home Screen -->
         <activity
-            android:name=".HomeActivity"
+            android:name=".activities.HomeActivity"
             android:exported="false"/>
 
         <!-- 🔹 AR Scanner -->
         <activity
-            android:name=".ARScanActivity"
+            android:name=".activities.ARScanActivity"
             android:exported="false"/>
 
         <!-- ARCore -->
         <meta-data
             android:name="com.google.ar.core"
             android:value="required"/>
+
+        <activity
+            android:name=".activities.ScanSummaryActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.ImagePreviewActivity"
+            android:exported="false"/>
+        <activity
+            android:name=".activities.AnalysisResultActivity"
+            android:exported="false"/>
+
+
+
     </application>
 
 </manifest>
