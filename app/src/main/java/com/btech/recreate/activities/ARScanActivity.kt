@@ -8,12 +8,13 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
 import com.btech.recreate.ar.ARImageUtil
 import com.btech.recreate.data.CaptureFrame
 import com.btech.recreate.data.ObjectScanSession
-import com.btech.recreate.R
 import com.btech.recreate.data.ScanRepository
 import com.btech.recreate.data.ViewType
+import com.google.ar.core.Config
 import com.google.ar.sceneform.ux.ArFragment
 import java.io.File
 import java.io.FileOutputStream
@@ -47,10 +48,31 @@ class ARScanActivity : AppCompatActivity() {
         txtInstruction = findViewById(R.id.txt_instruction)
         txtObjectInfo = findViewById(R.id.txt_object_info)
 
+        // 🔹 ENABLE ARCORE AUTOFOCUS (IMPORTANT FIX)
+        arFragment.arSceneView.scene.addOnUpdateListener {
+            val session = arFragment.arSceneView.session ?: return@addOnUpdateListener
+            val config = session.config
+            if (config.focusMode != Config.FocusMode.AUTO) {
+                config.focusMode = Config.FocusMode.AUTO
+                session.configure(config)
+            }
+        }
+
         // 🔹 Check if this is retake mode
         isRetakeMode = intent.getBooleanExtra("retakeMode", false)
         retakeObjectIndex = intent.getIntExtra("objectIndex", -1)
         val viewName = intent.getStringExtra("viewType")
+
+        // 🔹 Clear old images when starting a fresh scan session
+        if (!isRetakeMode) {
+            val scanDir = File(
+                getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                "recreate_scans"
+            )
+            if (scanDir.exists()) {
+                scanDir.listFiles()?.forEach { it.delete() }
+            }
+        }
 
         if (isRetakeMode && viewName != null) {
             retakeViewType = ViewType.valueOf(viewName)
@@ -135,17 +157,30 @@ class ARScanActivity : AppCompatActivity() {
         )
         if (!dir.exists()) dir.mkdirs()
 
-        val file = File(dir, "IMG_${System.currentTimeMillis()}.jpg")
+        val objectId = "obj$objectCount"
+
+        val viewName = if (isRetakeMode && retakeViewType != null) {
+            retakeViewType!!.name.lowercase()
+        } else {
+            viewOrder[currentViewIndex].name.lowercase()
+        }
+
+        val fileName = "${objectId}_${viewName}.jpg"
+        val file = File(dir, fileName)
+
         FileOutputStream(file).use {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
         }
+
         return file.absolutePath
     }
 
     private fun updateTexts() {
         txtObjectInfo.text = "Object $objectCount"
-        txtInstruction.text = "Capture ${viewOrder[currentViewIndex].displayName}"
+        txtInstruction.text =
+            "Place object fully inside the box\nCapture ${viewOrder[currentViewIndex].displayName}"
     }
+
 
     private fun showCompletionButtons() {
         findViewById<Button>(R.id.btn_capture_view).isEnabled = false
