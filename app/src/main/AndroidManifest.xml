@@ -3,10 +3,16 @@
     package="com.btech.recreate">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-feature
         android:name="android.hardware.camera.ar"
         android:required="true" />
+
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+
     <meta-data
         android:name="com.google.ar.core.depth"
         android:value="required" />
@@ -16,46 +22,40 @@
         android:icon="@drawable/recreate_logo"
         android:label="RECREATE"
         android:supportsRtl="true"
-        android:theme="@style/Theme.RECREATE">
-
+        android:theme="@style/Theme.RECREATE"
+        android:usesCleartextTraffic="true">
+        <activity
+            android:name=".activities.AnalysisResultActivity2"
+            android:exported="false" />
         <!-- 🔹 Splash Screen (ONLY launcher) -->
         <activity
             android:name=".activities.SplashActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
+                <action android:name="android.intent.action.MAIN" />
 
-        <!-- 🔹 Home Screen -->
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity> <!-- 🔹 Home Screen -->
         <activity
             android:name=".activities.HomeActivity"
-            android:exported="false"/>
-
-        <!-- 🔹 AR Scanner -->
+            android:exported="false" /> <!-- 🔹 AR Scanner -->
         <activity
             android:name=".activities.ARScanActivity"
-            android:exported="false"/>
-
-        <!-- ARCore -->
+            android:exported="false" /> <!-- ARCore -->
         <meta-data
             android:name="com.google.ar.core"
-            android:value="required"/>
+            android:value="required" />
 
         <activity
             android:name=".activities.ScanSummaryActivity"
-            android:exported="false"/>
-
+            android:exported="false" />
         <activity
             android:name=".activities.ImagePreviewActivity"
-            android:exported="false"/>
+            android:exported="false" />
         <activity
-            android:name=".activities.AnalysisResultActivity"
-            android:exported="false"/>
-
-
-
+            android:name=".activities.AnalysisResultActivity2"
+            android:exported="false" />
     </application>
 
 </manifest>
