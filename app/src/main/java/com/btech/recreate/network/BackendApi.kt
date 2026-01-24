@@ -10,7 +10,7 @@ object BackendApi {
 
     // For Android Emulator
     private const val SERVER_URL =
-        "http://192.168.20.12:8000/analyze-session"
+        "http://192.168.137.251:8000/analyze-session"
 
 
     private val client = OkHttpClient()

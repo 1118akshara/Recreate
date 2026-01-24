@@ -24,38 +24,47 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RECREATE"
         android:usesCleartextTraffic="true">
-        <activity
-            android:name=".activities.AnalysisResultActivity2"
-            android:exported="false" />
-        <!-- 🔹 Splash Screen (ONLY launcher) -->
+
+        <!-- Splash Screen (Launcher) -->
         <activity
             android:name=".activities.SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity> <!-- 🔹 Home Screen -->
+        </activity>
+
+        <!-- Home Screen -->
         <activity
             android:name=".activities.HomeActivity"
-            android:exported="false" /> <!-- 🔹 AR Scanner -->
+            android:exported="false" />
+
+        <!-- AR Scanner -->
         <activity
             android:name=".activities.ARScanActivity"
-            android:exported="false" /> <!-- ARCore -->
-        <meta-data
-            android:name="com.google.ar.core"
-            android:value="required" />
+            android:exported="false" />
 
+        <!-- Scan Summary -->
         <activity
             android:name=".activities.ScanSummaryActivity"
             android:exported="false" />
+
+        <!-- Image Preview -->
         <activity
             android:name=".activities.ImagePreviewActivity"
             android:exported="false" />
+
+        <!-- Analysis Result -->
         <activity
             android:name=".activities.AnalysisResultActivity2"
             android:exported="false" />
+
+        <!-- ARCore requirement -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required" />
     </application>
+
 
 </manifest>
