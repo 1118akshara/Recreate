@@ -13,3 +13,15 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+
+
+# Python / Plenoxels
+venv/
+backend/uploads/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
