@@ -1,39 +1,24 @@
-from object_detection import detect_object
-from material_inference import infer_material
-from dimension_estimation import estimate_dimensions
-from reuse_engine import suggest_single_object_reuse
-
+from backend.object_detection import detect_object
+from backend.efficientnet_material import predict_material
+from backend.dimension_estimation import estimate_dimensions
 
 def analyze_single_object(image_paths):
-    """
-    Analyze one object given multiple images (different views)
-    """
-
-    # 1️⃣ Detect object type
-    detected_object = detect_object(image_paths)
-    if not detected_object:
+    # Object detection
+    object_name = detect_object(image_paths)
+    if not object_name:
         return None
 
-    # ✅ FIX: define object_name
-    object_name = detected_object
+    # Material detection
+    material_result = predict_material(image_paths)
 
-    # 2️⃣ Infer material
-    material = infer_material(object_name)
-
-    # 3️⃣ Estimate dimensions (temporary approximation)
+    # Dimensions (placeholder / AR later)
     dimensions = estimate_dimensions(bbox_height_px=250)
 
-    # ✅ SAFE height access
-    height_cm = dimensions.get("height_cm", 0)
 
-    # 4️⃣ Return full analysis including reuse ideas
     return {
         "object": object_name,
-        "material": material,
+        "material": material_result["material"],
+        "confidence": material_result["confidence"],
         "dimensions": dimensions,
-        "reuse_ideas": suggest_single_object_reuse(
-            object_name,
-            material,
-            height_cm
-        )
+        
     }

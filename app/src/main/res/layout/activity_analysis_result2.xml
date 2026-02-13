@@ -87,6 +87,13 @@
                     android:textSize="15sp"
                     android:textColor="#212121"
                     android:lineSpacingExtra="4dp" />
+                <Button
+                    android:id="@+id/btnAIReuse"
+                    android:text="Generate AI Reuse Suggestions"
+                    android:layout_marginTop="16dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>

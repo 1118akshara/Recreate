@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import com.btech.recreate.data.ScanRepository
 import com.btech.recreate.network.BackendApi
+import org.json.JSONObject
 import java.io.File
 
 class ScanSummaryActivity : AppCompatActivity() {
@@ -19,18 +20,15 @@ class ScanSummaryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Root ScrollView
+        // ---------- UI ROOT ----------
         val scrollView = ScrollView(this)
-
-        // Root layout
         val rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(24, 24, 24, 24)
         }
-
         scrollView.addView(rootLayout)
 
-        // Title
+        // ---------- TITLE ----------
         val title = TextView(this).apply {
             text = "Scan Summary"
             textSize = 22f
@@ -38,7 +36,7 @@ class ScanSummaryActivity : AppCompatActivity() {
         }
         rootLayout.addView(title)
 
-        // Object cards
+        // ---------- OBJECT CARDS ----------
         ScanRepository.scannedObjects.forEachIndexed { index, obj ->
 
             val card = CardView(this).apply {
@@ -80,40 +78,41 @@ class ScanSummaryActivity : AppCompatActivity() {
             card.addView(content)
             rootLayout.addView(card)
 
-            // spacing
             val spacer = TextView(this)
             spacer.height = 24
             rootLayout.addView(spacer)
         }
 
-        // Analyze button
+        // ---------- ANALYZE BUTTON ----------
         val analyzeButton = Button(this).apply {
             text = "Analyze Objects (AI)"
             textSize = 16f
+
             setOnClickListener {
 
-                val imageDir = File(
-                    getExternalFilesDir(null),
-                    "Pictures/recreate_scans"
-                )
+                // Build object → view → file map
+                val objectImageMap = mutableMapOf<String, Map<String, File>>()
 
-                if (!imageDir.exists()) {
-                    Toast.makeText(
-                        this@ScanSummaryActivity,
-                        "No images found",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
+                ScanRepository.scannedObjects.forEachIndexed { index, obj ->
+                    val viewMap = mutableMapOf<String, File>()
+
+                    obj.captures.forEach { (viewType, frame) ->
+                        val file = File(frame.imagePath)
+                        if (file.exists()) {
+                            viewMap[viewType.name] = file
+                            Log.d(
+                                "UPLOAD_DEBUG",
+                                "object_${index + 1} -> ${viewType.name} -> ${file.absolutePath}"
+                            )
+                        }
+                    }
+
+                    if (viewMap.isNotEmpty()) {
+                        objectImageMap["object_${index + 1}"] = viewMap
+                    }
                 }
 
-                val imageFiles = imageDir
-                    .listFiles { file -> file.extension.lowercase() == "jpg" }
-                    ?.toList()
-                    ?: emptyList()
-
-                Log.d("RECREATE", "Found ${imageFiles.size} images")
-
-                if (imageFiles.isEmpty()) {
+                if (objectImageMap.isEmpty()) {
                     Toast.makeText(
                         this@ScanSummaryActivity,
                         "No images to analyze",
@@ -122,20 +121,47 @@ class ScanSummaryActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                BackendApi.uploadImages(imageFiles) { response ->
+                // ---------- BACKEND CALL ----------
+                BackendApi.uploadMultipleObjects(objectImageMap) { response ->
                     runOnUiThread {
-                        if (response != null && response.trim().startsWith("{")) {
+
+                        if (response == null) {
+                            Toast.makeText(
+                                this@ScanSummaryActivity,
+                                "No response from server",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@runOnUiThread
+                        }
+
+                        try {
+                            val json = JSONObject(response)
+
+                            if (!json.has("objects")) {
+                                Toast.makeText(
+                                    this@ScanSummaryActivity,
+                                    "Invalid analysis result",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@runOnUiThread
+                            }
+
                             val intent = Intent(
                                 this@ScanSummaryActivity,
                                 AnalysisResultActivity2::class.java
                             )
-                            intent.putExtra("analysis_json", response)
+                            intent.putExtra(
+                                "analysis_json",
+                                json.toString()
+                            )
                             startActivity(intent)
-                        } else {
+
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                             Toast.makeText(
                                 this@ScanSummaryActivity,
-                                "Analysis failed. Please try again.",
-                                Toast.LENGTH_SHORT
+                                "Failed to parse analysis results",
+                                Toast.LENGTH_LONG
                             ).show()
                         }
                     }
@@ -144,7 +170,6 @@ class ScanSummaryActivity : AppCompatActivity() {
         }
 
         rootLayout.addView(analyzeButton)
-
         setContentView(scrollView)
     }
 }
