@@ -1,22 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:background="@android:color/white">
+    android:background="#4F46E5">
 
-    <ImageView
-        android:src="@drawable/recreate_logo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:contentDescription="Logo"/>
-
-    <TextView
-        android:text="RECREATE – Scan. Reuse. Reimagine."
-        android:textSize="16sp"
-        android:layout_marginTop="16dp"
-        android:textColor="@android:color/black"
+    <!-- Center Content -->
+    <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-</LinearLayout>
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <!-- Logo Card -->
+        <TextView
+            android:id="@+id/logoBox"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:gravity="center"
+            android:text="R"
+            android:textColor="#4F46E5"
+            android:textSize="40sp"
+            android:textStyle="bold"
+            android:background="@drawable/splash_logo_bg"
+            android:elevation="8dp"/>
+
+        <!-- App Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="recreate"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"/>
+
+        <!-- Tagline -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AI UPCYCLING"
+            android:textColor="#E0E7FF"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp"
+            android:letterSpacing="0.3"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+</RelativeLayout>

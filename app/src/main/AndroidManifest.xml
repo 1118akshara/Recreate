@@ -2,8 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.btech.recreate">
 
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Camera hardware declaration -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <uses-feature
         android:name="android.hardware.camera.ar"
@@ -13,10 +19,6 @@
         android:name="android.hardware.camera.autofocus"
         android:required="false" />
 
-    <meta-data
-        android:name="com.google.ar.core.depth"
-        android:value="required" />
-
     <application
         android:allowBackup="true"
         android:icon="@drawable/recreate_logo"
@@ -24,38 +26,59 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RECREATE"
         android:usesCleartextTraffic="true">
-        <activity
-            android:name=".activities.AnalysisResultActivity2"
-            android:exported="false" />
-        <!-- 🔹 Splash Screen (ONLY launcher) -->
+
+        <!-- ARCore requirement -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required" />
+
+        <meta-data
+            android:name="com.google.ar.core.depth"
+            android:value="required" />
+
+        <!-- Splash Screen (Launcher) -->
         <activity
             android:name=".activities.SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity> <!-- 🔹 Home Screen -->
+        </activity>
+
+        <!-- Home -->
         <activity
             android:name=".activities.HomeActivity"
-            android:exported="false" /> <!-- 🔹 AR Scanner -->
+            android:exported="false" />
+
+        <!-- AR Scan -->
         <activity
             android:name=".activities.ARScanActivity"
-            android:exported="false" /> <!-- ARCore -->
-        <meta-data
-            android:name="com.google.ar.core"
-            android:value="required" />
+            android:exported="false" />
 
+        <!-- Scan Summary -->
         <activity
             android:name=".activities.ScanSummaryActivity"
             android:exported="false" />
+
+        <!-- Image Preview -->
         <activity
             android:name=".activities.ImagePreviewActivity"
             android:exported="false" />
+
+        <!-- Analysis Result -->
         <activity
             android:name=".activities.AnalysisResultActivity2"
             android:exported="false" />
-    </application>
 
+        <!-- AI Reuse -->
+        <activity
+            android:name=".activities.AIReuseSuggestionsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.AIReuseDetailActivity"
+            android:exported="false" />
+
+    </application>
 </manifest>

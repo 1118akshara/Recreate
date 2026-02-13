@@ -1,24 +1,22 @@
-# Gradle
+# Android
 .gradle/
-build/
-
-# Android Studio / IntelliJ
 .idea/
-*.iml
-
-# Local SDK path
+build/
 local.properties
+
+# Python
+venv_gpu/
+__pycache__/
+*.pyc
+
+# Model weights
+*.pt
+*.pth
+*.onnx
 
 # Logs
 *.log
 
-# Kotlin
-.kotlin/
-
-# Native build
-.externalNativeBuild/
-.cxx/
-
-# OS
-Thumbs.db
-.DS_Store
+# Uploads folder (if it contains runtime images)
+backend/uploads/
+uploads/
