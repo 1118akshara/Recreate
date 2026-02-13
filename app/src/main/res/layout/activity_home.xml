@@ -1,0 +1,41 @@
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#F3F4F6">
+    <!--  Scroll Content  -->
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:layout_above="@id/bottomNav">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+            <!--  HEADER  -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="recreate" android:textSize="28sp" android:textStyle="bold" android:textColor="#111827"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Welcome back, User" android:textSize="14sp" android:textColor="#6B7280" android:layout_marginTop="4dp"/>
+                </LinearLayout>
+                <TextView android:layout_width="48dp" android:layout_height="48dp" android:gravity="center" android:background="@drawable/avatar_bg" android:text="U" android:textStyle="bold" android:textColor="#4F46E5" android:textSize="18sp"/>
+            </LinearLayout>
+            <!--  HERO CARD  -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="200dp" android:layout_marginTop="32dp" android:background="@drawable/hero_card_bg" android:padding="24dp" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="New Object?" android:textSize="22sp" android:textStyle="bold" android:textColor="#FFFFFF"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Scan it now to see what you can build today." android:textSize="14sp" android:textColor="#E0E7FF" android:layout_marginTop="8dp"/>
+                <Button android:id="@+id/btn_scan" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Start Scan" android:layout_marginTop="24dp" android:backgroundTint="#FFFFFF" android:textColor="#4F46E5"/>
+            </LinearLayout>
+            <!--  STATS  -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="24dp" android:baselineAligned="false">
+                <LinearLayout android:layout_width="0dp" android:layout_height="100dp" android:layout_weight="1" android:background="@drawable/stat_card_bg" android:padding="16dp" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12" android:textSize="22sp" android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Saved Ideas" android:textSize="12sp" android:textColor="#6B7280"/>
+                </LinearLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="100dp" android:layout_weight="1" android:layout_marginStart="12dp" android:background="@drawable/stat_card_bg" android:padding="16dp" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="4" android:textSize="22sp" android:textStyle="bold" android:textColor="#4F46E5"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Completed" android:textSize="12sp" android:textColor="#6B7280"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+    <!--  Bottom Navigation  -->
+    <LinearLayout android:id="@+id/bottomNav" android:layout_width="match_parent" android:layout_height="72dp" android:layout_alignParentBottom="true" android:background="#FFFFFF" android:elevation="8dp" android:gravity="center" android:orientation="horizontal">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="Home"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="Scan"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="Saved"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="Profile"/>
+        <Button android:id="@+id/btn_saved" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Saved Projects"/>
+    </LinearLayout>
+</RelativeLayout>

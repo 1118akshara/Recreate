@@ -1,0 +1,45 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+backend/
+venv/
+env/
+open3d_env/
+__pycache__/
+*.pyc
+*.pyd
+*.dll
+*.pt
+
+# Torch / Open3D binaries
+*.dll
+*.so
+*.dylib
+
+# Model files
+*.pt
+*.pth
+
+# Uploads
+uploads/
+
+# -----------------------------
+# Android
+# -----------------------------
+.gradle/
+local.properties
+.idea/
+*.iml
+build/
+
+# -----------------------------
+# Misc
+# -----------------------------
+.DS_Store
+Thumbs.db

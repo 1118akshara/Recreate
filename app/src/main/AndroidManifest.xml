@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.btech.recreate">
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature
+        android:name="android.hardware.camera.ar"
+        android:required="true" />
+
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
+
+    <meta-data
+        android:name="com.google.ar.core.depth"
+        android:value="required" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/recreate_logo"
+        android:label="RECREATE"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RECREATE"
+        android:usesCleartextTraffic="true">
+
+        <!-- Splash Screen (Launcher) -->
+        <activity
+            android:name=".activities.SplashActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Home Screen -->
+        <activity
+            android:name=".activities.HomeActivity"
+            android:exported="false" />
+
+        <!-- AR Scanner -->
+        <activity
+            android:name=".activities.ARScanActivity"
+            android:exported="false" />
+
+        <!-- Scan Summary -->
+        <activity
+            android:name=".activities.ScanSummaryActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".activities.AnalysisResultActivity2"
+            android:exported="false" />
+
+        <!-- ARCore requirement -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="required" />
+    </application>
+
+
+</manifest>
