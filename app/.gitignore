@@ -20,3 +20,8 @@ __pycache__/
 # Uploads folder (if it contains runtime images)
 backend/uploads/
 uploads/
+# Environment
+.env
+
+# Archives
+*.zip
