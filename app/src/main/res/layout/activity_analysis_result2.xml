@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFA"
-    android:padding="16dp">
+    android:padding="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Page Title -->
         <TextView
             android:id="@+id/txtTitle"
             android:layout_width="wrap_content"
@@ -19,84 +16,24 @@
             android:text="Analysis Result"
             android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="#212121"
-            android:paddingBottom="16dp" />
+            android:layout_marginBottom="24dp" />
 
-        <!-- Detected Objects Card -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/txtObjectName"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
+            android:text="Object:"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="#FFFFFF">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Detected Objects"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="#2E7D32"
-                    android:paddingBottom="8dp" />
-
-                <TextView
-                    android:id="@+id/txtObjects"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="15sp"
-                    android:textColor="#212121"
-                    android:lineSpacingExtra="4dp" />
-            </LinearLayout>
-
-        </androidx.cardview.widget.CardView>
-
-        <!-- Reuse Ideas Card -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/txtMaterial"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="#FFFFFF">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Reuse Suggestions"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="#2E7D32"
-                    android:paddingBottom="8dp" />
-
-                <TextView
-                    android:id="@+id/txtReuse"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="15sp"
-                    android:textColor="#212121"
-                    android:lineSpacingExtra="4dp" />
-                <Button
-                    android:id="@+id/btnAIReuse"
-                    android:text="Generate AI Reuse Suggestions"
-                    android:layout_marginTop="16dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"/>
-
-            </LinearLayout>
-
-        </androidx.cardview.widget.CardView>
+            android:text="Material:"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
 
     </LinearLayout>
+
 </ScrollView>

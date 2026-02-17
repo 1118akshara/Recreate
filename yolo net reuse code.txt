@@ -1,0 +1,1431 @@
+﻿
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\AIReuseDetailActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.os.Bundle
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+import com.btech.recreate.network.BackendApi
+import org.json.JSONArray
+
+class AIReuseDetailActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_ai_reuse_detail)
+
+        val idea = intent.getStringExtra("idea_title")
+
+        findViewById<TextView>(R.id.txtIdeaTitle).text = idea
+
+        if (idea == null) return
+
+        BackendApi.generateSteps(idea) { result ->
+
+            runOnUiThread {
+
+                if (result == null) {
+                    findViewById<TextView>(R.id.txtSteps).text =
+                        "Failed to load steps"
+                    return@runOnUiThread
+                }
+
+                try {
+                    val array = JSONArray(result)
+
+                    val builder = StringBuilder()
+
+                    for (i in 0 until array.length()) {
+                        val step = array.getJSONObject(i)
+
+                        builder.append("Step ${step.getInt("step_number")}\n")
+                        builder.append(step.getString("instruction"))
+                        builder.append("\n\n")
+                    }
+
+                    findViewById<TextView>(R.id.txtSteps).text =
+                        builder.toString()
+
+                } catch (e: Exception) {
+                    findViewById<TextView>(R.id.txtSteps).text =
+                        "Invalid step response"
+                }
+            }
+        }
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\AIReuseSuggestionsActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.ArrayAdapter
+import android.widget.ListView
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+import com.btech.recreate.network.BackendApi
+import org.json.JSONObject
+import androidx.appcompat.app.AlertDialog
+
+class AIReuseSuggestionsActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_ai_reuse_suggestions)
+
+        title = "Reuse Suggestions"
+
+        val analysisJson = intent.getStringExtra("analysis_json")
+
+        if (analysisJson == null) {
+            showError("No analysis data found")
+            return
+        }
+
+        BackendApi.generateAIReuseIdeas(analysisJson) { result ->
+
+            runOnUiThread {
+
+                if (result == null) {
+                    showError("Failed to get AI suggestions")
+                    return@runOnUiThread
+                }
+
+                try {
+                    val json = JSONObject(result)
+
+                    val easy = json.getJSONArray("easy")
+                    val moderate = json.getJSONArray("moderate")
+                    val hard = json.getJSONArray("very_hard")
+
+                    setupList(R.id.listEasy, easy)
+                    setupList(R.id.listModerate, moderate)
+                    setupList(R.id.listHard, hard)
+
+                } catch (e: Exception) {
+                    showError("Invalid AI response")
+                }
+            }
+        }
+    }
+
+    private fun setupList(listId: Int, array: org.json.JSONArray) {
+
+        val listView = findViewById<ListView>(listId)
+
+        val titles = mutableListOf<String>()
+
+        for (i in 0 until array.length()) {
+            titles.add(array.getJSONObject(i).getString("title"))
+        }
+
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            titles
+        )
+
+        listView.adapter = adapter
+
+        listView.setOnItemClickListener { _, _, position, _ ->
+
+            val intent = Intent(
+                this,
+                AIReuseDetailActivity::class.java
+            )
+
+            intent.putExtra("idea_title", titles[position])
+            startActivity(intent)
+        }
+    }
+
+    private fun showError(message: String) {
+        AlertDialog.Builder(this)
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
+    }
+}
+
+
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\AnalysisResultActivity2.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.Button
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+import org.json.JSONObject
+
+class AnalysisResultActivity2 : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_analysis_result2)
+
+        val txtObjects = findViewById<TextView>(R.id.txtObjects)
+        val txtReuse = findViewById<TextView>(R.id.txtReuse)
+        val btnAIReuse = findViewById<Button>(R.id.btnAIReuse)
+
+        val jsonString = intent.getStringExtra("analysis_json")
+
+        if (jsonString.isNullOrBlank()) {
+            txtObjects.text = "No analysis data received."
+            txtReuse.text = ""
+            return
+        }
+
+        try {
+            val json = JSONObject(jsonString)
+
+            val objectsArray = json.optJSONArray("objects")
+            val combinedReuseArray = json.optJSONArray("combined_reuse_suggestions")
+
+            if (objectsArray == null || objectsArray.length() == 0) {
+                txtObjects.text = "No objects detected."
+                txtReuse.text = ""
+                return
+            }
+
+            val objectsText = StringBuilder()
+            objectsText.append("Detected Objects\n\n")
+
+            for (i in 0 until objectsArray.length()) {
+                val obj = objectsArray.getJSONObject(i)
+
+                val name = obj.optString("object", "Unknown")
+                val material = obj.optString("material", "Unknown")
+
+                val height = obj
+                    .optJSONObject("dimensions")
+                    ?.optDouble("height_cm", 0.0)
+                    ?: 0.0
+
+                objectsText.append("â€¢ Object ${i + 1}\n")
+                objectsText.append("  Type: $name\n")
+                objectsText.append("  Material: $material\n")
+                objectsText.append("  Height: ${"%.2f".format(height)} cm\n\n")
+            }
+
+            txtObjects.text = objectsText.toString()
+
+            val reuseText = StringBuilder()
+
+            if (combinedReuseArray != null && combinedReuseArray.length() > 0) {
+                reuseText.append("Combined Reuse Suggestions\n\n")
+                for (i in 0 until combinedReuseArray.length()) {
+                    reuseText.append("â€¢ ${combinedReuseArray.getString(i)}\n")
+                }
+            } else {
+                reuseText.append("No combined reuse suggestions available.")
+            }
+
+            txtReuse.text = reuseText.toString()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            txtObjects.text = "Failed to parse analysis result."
+            txtReuse.text = ""
+        }
+
+        // NAVIGATION TO REUSE SUGGESTIONS PAGE
+        btnAIReuse.setOnClickListener {
+
+            val intent = Intent(
+                this@AnalysisResultActivity2,
+                AIReuseSuggestionsActivity::class.java
+
+            )
+            intent.putExtra("analysis_json", jsonString)
+            startActivity(intent)
+        }
+    }
+}
+
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\ScanSummaryActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.os.Bundle
+import android.util.Log
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import com.btech.recreate.data.ScanRepository
+import com.btech.recreate.network.BackendApi
+import org.json.JSONObject
+import java.io.File
+
+class ScanSummaryActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // ---------- UI ROOT ----------
+        val scrollView = ScrollView(this)
+        val rootLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 24, 24, 24)
+        }
+        scrollView.addView(rootLayout)
+
+        // ---------- TITLE ----------
+        val title = TextView(this).apply {
+            text = "Scan Summary"
+            textSize = 22f
+            setPadding(0, 0, 0, 24)
+        }
+        rootLayout.addView(title)
+
+        // ---------- OBJECT CARDS ----------
+        ScanRepository.scannedObjects.forEachIndexed { index, obj ->
+
+            val card = CardView(this).apply {
+                radius = 20f
+                cardElevation = 8f
+                useCompatPadding = true
+                setContentPadding(24, 24, 24, 24)
+            }
+
+            val content = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            val header = TextView(this).apply {
+                text = "Object ${index + 1}"
+                textSize = 18f
+                setPadding(0, 0, 0, 12)
+            }
+            content.addView(header)
+
+            obj.captures.values.forEach { frame ->
+                val viewText = TextView(this).apply {
+                    text = "â€¢ ${frame.viewType.displayName}"
+                    textSize = 15f
+                    setPadding(0, 6, 0, 6)
+                    setOnClickListener {
+                        val intent = Intent(
+                            this@ScanSummaryActivity,
+                            ImagePreviewActivity::class.java
+                        )
+                        intent.putExtra("objectIndex", index)
+                        intent.putExtra("viewType", frame.viewType.name)
+                        startActivity(intent)
+                    }
+                }
+                content.addView(viewText)
+            }
+
+            card.addView(content)
+            rootLayout.addView(card)
+
+            val spacer = TextView(this)
+            spacer.height = 24
+            rootLayout.addView(spacer)
+        }
+
+        // ---------- ANALYZE BUTTON ----------
+        val analyzeButton = Button(this).apply {
+            text = "Analyze Objects (AI)"
+            textSize = 16f
+
+            setOnClickListener {
+
+                // Build object â†’ view â†’ file map
+                val objectImageMap = mutableMapOf<String, Map<String, File>>()
+
+                ScanRepository.scannedObjects.forEachIndexed { index, obj ->
+                    val viewMap = mutableMapOf<String, File>()
+
+                    obj.captures.forEach { (viewType, frame) ->
+                        val file = File(frame.imagePath)
+                        if (file.exists()) {
+                            viewMap[viewType.name] = file
+                            Log.d(
+                                "UPLOAD_DEBUG",
+                                "object_${index + 1} -> ${viewType.name} -> ${file.absolutePath}"
+                            )
+                        }
+                    }
+
+                    if (viewMap.isNotEmpty()) {
+                        objectImageMap["object_${index + 1}"] = viewMap
+                    }
+                }
+
+                if (objectImageMap.isEmpty()) {
+                    Toast.makeText(
+                        this@ScanSummaryActivity,
+                        "No images to analyze",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                // ---------- BACKEND CALL ----------
+                BackendApi.uploadMultipleObjects(objectImageMap) { response ->
+                    runOnUiThread {
+
+                        if (response == null) {
+                            Toast.makeText(
+                                this@ScanSummaryActivity,
+                                "No response from server",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@runOnUiThread
+                        }
+
+                        try {
+                            val json = JSONObject(response)
+
+                            if (!json.has("objects")) {
+                                Toast.makeText(
+                                    this@ScanSummaryActivity,
+                                    "Invalid analysis result",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@runOnUiThread
+                            }
+
+                            val intent = Intent(
+                                this@ScanSummaryActivity,
+                                AnalysisResultActivity2::class.java
+                            )
+                            intent.putExtra(
+                                "analysis_json",
+                                json.toString()
+                            )
+                            startActivity(intent)
+
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            Toast.makeText(
+                                this@ScanSummaryActivity,
+                                "Failed to parse analysis results",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        rootLayout.addView(analyzeButton)
+        setContentView(scrollView)
+    }
+}
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\analysis\AnalysisPayloadBuilder.kt =====
+
+package com.btech.recreate.analysis
+
+import com.btech.recreate.data.ScanRepository
+import org.json.JSONArray
+import org.json.JSONObject
+
+object AnalysisPayloadBuilder {
+
+    fun buildPayload(): JSONObject {
+        val root = JSONObject()
+        val objectsArray = JSONArray()
+
+        ScanRepository.scannedObjects.forEachIndexed { index, obj ->
+            val objJson = JSONObject()
+            objJson.put("object_id", "object_${index + 1}")
+
+            val imagesArray = JSONArray()
+
+            obj.captures.values.forEach { frame ->
+                val imageJson = JSONObject()
+                imageJson.put("view", frame.viewType.name)
+                imageJson.put("image_path", frame.imagePath)
+                imageJson.put("pose", JSONArray(frame.poseMatrix.toList()))
+                imagesArray.put(imageJson)
+            }
+
+            objJson.put("images", imagesArray)
+            objectsArray.put(objJson)
+        }
+
+        root.put("objects", objectsArray)
+        return root
+    }
+}
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\network\BackendApi.kt =====
+
+package com.btech.recreate.network
+
+import android.util.Log
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONObject
+import java.io.File
+import java.io.IOException
+
+object BackendApi {
+
+    private val client = OkHttpClient()
+
+    /* ==========================================================
+       1ï¸âƒ£ ANALYZE SESSION (YOLO + EfficientNet)
+     ========================================================== */
+
+    fun uploadMultipleObjects(
+        objectImageMap: Map<String, Map<String, File>>,
+        onResult: (String?) -> Unit
+    ) {
+
+        val multipart = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+
+        for ((objectId, views) in objectImageMap) {
+            for ((viewType, file) in views) {
+
+                multipart.addFormDataPart("object_ids", objectId)
+                multipart.addFormDataPart("view_types", viewType)
+
+                val body = file
+                    .asRequestBody("image/jpeg".toMediaType())
+
+                multipart.addFormDataPart(
+                    "files",
+                    file.name,
+                    body
+                )
+            }
+        }
+
+        val request = Request.Builder()
+            .url("${ServerConfig.BASE_URL}/analyze-session")
+            .post(multipart.build())
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                onResult(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                onResult(response.body?.string())
+            }
+        })
+    }
+
+    /* ==========================================================
+       2ï¸âƒ£ GENERATE AI REUSE IDEAS
+     ========================================================== */
+
+    fun generateAIReuseIdeas(
+        analysisJson: String,
+        onResult: (String?) -> Unit
+    ) {
+
+        val mediaType = "application/json".toMediaType()
+
+        val body = RequestBody.create(
+            mediaType,
+            analysisJson
+        )
+
+        val request = Request.Builder()
+            .url("${ServerConfig.BASE_URL}/generate-reuse-ai")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                onResult(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                onResult(response.body?.string())
+            }
+        })
+    }
+
+    /* ==========================================================
+       3ï¸âƒ£ GENERATE STEPS
+     ========================================================== */
+
+    fun generateSteps(
+        ideaTitle: String,
+        onResult: (String?) -> Unit
+    ) {
+
+        val json = JSONObject()
+        json.put("idea", ideaTitle)
+
+        val body = RequestBody.create(
+            "application/json".toMediaType(),
+            json.toString()
+        )
+
+        val request = Request.Builder()
+            .url("${ServerConfig.BASE_URL}/generate-steps")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                onResult(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                onResult(response.body?.string())
+            }
+        })
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\network\ServerConfig.kt =====
+
+package com.btech.recreate.network
+
+object ServerConfig {
+
+    // Change this IP when needed
+    var BASE_URL = "http://192.168.20.5:8000"
+
+}
+
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_ai_reuse_detail.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/txtIdeaTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Idea Title"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <TextView
+            android:id="@+id/txtSteps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Steps will appear here"
+            android:textSize="16sp"/>
+
+    </LinearLayout>
+</ScrollView>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_ai_reuse_suggestions.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FAFAFA"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- PAGE TITLE -->
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reuse Suggestions"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:paddingBottom="16dp"/>
+
+        <!-- EASY -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Easy"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"/>
+
+        <ListView
+            android:id="@+id/listEasy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:dividerHeight="8dp"/>
+
+        <!-- MODERATE -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Moderate"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:layout_marginTop="16dp"/>
+
+        <ListView
+            android:id="@+id/listModerate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:dividerHeight="8dp"/>
+
+        <!-- VERY HARD -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Very Hard"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:layout_marginTop="16dp"/>
+
+        <ListView
+            android:id="@+id/listHard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:dividerHeight="8dp"/>
+
+    </LinearLayout>
+</ScrollView>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_analysis_result2.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FAFAFA"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Page Title -->
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Analysis Result"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:paddingBottom="16dp" />
+
+        <!-- Detected Objects Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="#FFFFFF">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Detected Objects"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#2E7D32"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/txtObjects"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:textColor="#212121"
+                    android:lineSpacingExtra="4dp" />
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Reuse Ideas Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="#FFFFFF">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Reuse Suggestions"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#2E7D32"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/txtReuse"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp"
+                    android:textColor="#212121"
+                    android:lineSpacingExtra="4dp" />
+                <Button
+                    android:id="@+id/btnAIReuse"
+                    android:text="Generate AI Reuse Suggestions"
+                    android:layout_marginTop="16dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+</ScrollView>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\ai_prompts.py =====
+
+def reuse_prompt(analysis_json):
+    return f"""
+You are an AI expert in reuse and upcycling.
+
+Detected objects with dimensions and materials:
+{analysis_json}
+
+TASK:
+Generate NEW reuse ideas every time.
+
+CATEGORIES:
+- Easy
+- Moderate
+- Very Hard
+
+RULES:
+- Practical household projects only
+- Difficulty based on steps, tools, precision
+- No repeated ideas
+
+Return ONLY JSON in this format:
+{{
+  "prompt_used": "summary of reasoning",
+  "easy": [
+    {{
+      "title": "",
+      "description": "",
+      "youtube_query": ""
+    }}
+  ],
+  "moderate": [],
+  "very_hard": []
+}}
+"""
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\dimension_estimation.py =====
+
+def estimate_dimensions(bbox_height_px, ref_px=300, ref_height_cm=20):
+    scale = ref_height_cm / ref_px
+    height_cm = bbox_height_px * scale
+
+    return {
+        "height_cm": round(height_cm, 2)
+    }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\efficientnet_material.py =====
+
+import torch
+from torchvision import models, transforms
+from PIL import Image
+import os
+
+# ===============================
+# ORIGINAL TRAINED MATERIAL CLASSES (DO NOT MODIFY COUNT)
+# ===============================
+MATERIAL_CLASSES = [
+    "brick",
+    "carpet",
+    "ceramic",
+    "fabric",
+    "foliage",
+    "food",
+    "glass",
+    "hair",
+    "leather",
+    "metal",
+    "mirror",
+    "other",
+    "painted",
+    "paper",
+    "plastic",
+    "polishedstone",
+    "skin",
+    "sky",
+    "stone",
+    "tile",
+    "wallpaper",
+    "water",
+    "wood"
+]
+
+NUM_CLASSES = len(MATERIAL_CLASSES)
+
+# ===============================
+# ALLOWED MATERIALS FOR REUSE SYSTEM
+# ===============================
+ALLOWED_MATERIALS = [
+    "brick",
+    "carpet",
+    "fabric",
+    "foliage",
+    "food",
+    "glass",
+    "hair",
+    "leather",
+    "metal",
+    "mirror",
+    "other",
+    "painted",
+    "paper",
+    "plastic",
+    "polishedstone",
+    "stone",
+    "wallpaper",
+    "wood"
+]
+
+# ===============================
+# DEVICE
+# ===============================
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# ===============================
+# LOAD EFFICIENTNET
+# ===============================
+material_model = models.efficientnet_b0(weights=None)
+material_model.classifier[1] = torch.nn.Linear(1280, NUM_CLASSES)
+
+BASE_DIR = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(BASE_DIR, "efficientnet_material.pth")
+
+state_dict = torch.load(MODEL_PATH, map_location=device)
+material_model.load_state_dict(state_dict)
+
+material_model.to(device)
+material_model.eval()
+
+# ===============================
+# IMAGE PREPROCESSING
+# ===============================
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+# ===============================
+# MATERIAL PREDICTION
+# ===============================
+def predict_material(image_paths):
+
+    votes = []
+
+    for image_path in image_paths:
+
+        if not os.path.exists(image_path):
+            continue
+
+        image = Image.open(image_path).convert("RGB")
+
+        # ðŸ”¥ Use full image for stability
+        cropped = image
+
+        tensor = transform(cropped).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            outputs = material_model(tensor)
+            probs = torch.softmax(outputs, dim=1)
+            class_idx = torch.argmax(probs, dim=1).item()
+            confidence = probs[0][class_idx].item()
+
+        # ðŸ”¥ Stronger confidence threshold
+        if confidence >= 0.60:
+            predicted_material = MATERIAL_CLASSES[class_idx]
+            votes.append((predicted_material, confidence))
+
+    # No valid predictions
+    if not votes:
+        return {
+            "material": "unknown",
+            "confidence": 0.0
+        }
+
+    # Confidence-weighted voting
+    score_map = {}
+    for material, conf in votes:
+        score_map[material] = score_map.get(material, 0) + conf
+
+    final_material = max(score_map, key=score_map.get)
+    final_confidence = score_map[final_material] / len(votes)
+
+    # ðŸ”¥ Filter unwanted materials
+    if final_material not in ALLOWED_MATERIALS:
+        final_material = "unknown"
+
+    return {
+        "material": final_material,
+        "confidence": round(final_confidence, 2)
+    }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\llm_service.py =====
+
+import os
+import json
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise ValueError("OPENAI_API_KEY not found")
+
+client = OpenAI(api_key=api_key)
+
+
+def generate_reuse_ideas(analysis_json: dict):
+
+    prompt = f"""
+You are an AI expert in reuse and sustainability.
+
+Detected objects:
+{analysis_json}
+
+Generate NEW reuse ideas.
+
+Categorize into:
+- Easy
+- Moderate
+- Very Hard
+
+Return JSON ONLY. No explanation text.
+
+Format:
+
+{{
+ "easy": [{{"title":"","description":"","youtube_query":""}}],
+ "moderate": [],
+ "very_hard": []
+}}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.9
+    )
+
+    content = response.choices[0].message.content
+
+    try:
+        return json.loads(content)
+    except:
+        return {
+            "easy": [],
+            "moderate": [],
+            "very_hard": []
+        }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\main.py =====
+
+from fastapi import FastAPI, UploadFile, File, Form
+import shutil
+import os
+from typing import List, Dict
+from backend.object_analysis import analyze_single_object
+
+# ðŸ”¹ NEW IMPORTS FOR AI
+from backend.llm_service import generate_reuse_ideas
+from backend.step_service import generate_steps
+
+app = FastAPI()
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+# =====================================================
+# EXISTING ENDPOINT (UNCHANGED)
+# =====================================================
+@app.post("/analyze-session")
+async def analyze_session(
+    files: List[UploadFile] = File(...),
+    object_ids: List[str] = Form(...),
+    view_types: List[str] = Form(...)
+):
+    print("\n===== ANALYZE SESSION CALLED =====")
+    print(f"Files received: {len(files)}")
+
+    object_groups: Dict[str, List[str]] = {}
+
+    for file, obj_id, view in zip(files, object_ids, view_types):
+        obj_dir = os.path.join(UPLOAD_DIR, obj_id)
+        os.makedirs(obj_dir, exist_ok=True)
+
+        filename = f"{view}_{file.filename}"
+        path = os.path.join(obj_dir, filename)
+
+        with open(path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        object_groups.setdefault(obj_id, []).append(path)
+
+    print("Received objects:")
+    for obj_id, paths in object_groups.items():
+        print(obj_id, len(paths))
+        for p in paths:
+            print(" ", p)
+
+    analyzed_objects = []
+
+    for obj_id, paths in object_groups.items():
+        analysis = analyze_single_object(paths)
+        if analysis:
+            analysis["object_id"] = obj_id
+            analyzed_objects.append(analysis)
+
+    return {
+        "objects": analyzed_objects,
+       
+    }
+
+
+# =====================================================
+# NEW AI ENDPOINT 1 â€” LLM Categorized Ideas
+# =====================================================
+@app.post("/generate-reuse-ai")
+async def generate_reuse_ai(data: dict):
+
+    print("\n===== LLM REUSE GENERATION CALLED =====")
+
+    result = generate_reuse_ideas(data)
+
+    return result
+
+
+# =====================================================
+# NEW AI ENDPOINT 2 â€” Detailed Step Generation
+# =====================================================
+@app.post("/generate-steps")
+async def generate_reuse_steps(data: dict):
+
+    idea = data.get("idea")
+
+    if not idea:
+        return {"error": "Idea title required"}
+
+    print(f"\n===== GENERATING STEPS FOR: {idea} =====")
+
+    steps = generate_steps(idea)
+
+    return steps
+
+
+# =====================================================
+# HEALTH CHECK
+# =====================================================
+@app.get("/")
+def health_check():
+    return {"status": "Backend is running"}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\object_analysis.py =====
+
+from backend.object_detection import detect_object
+from backend.efficientnet_material import predict_material
+from backend.dimension_estimation import estimate_dimensions
+
+def analyze_single_object(image_paths):
+    # Object detection
+    object_name = detect_object(image_paths)
+    if not object_name:
+        return None
+
+    # Material detection
+    material_result = predict_material(image_paths)
+
+    # Dimensions (placeholder / AR later)
+    dimensions = estimate_dimensions(bbox_height_px=250)
+
+
+    return {
+        "object": object_name,
+        "material": material_result["material"],
+        "confidence": material_result["confidence"],
+        "dimensions": dimensions,
+        
+    }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\object_detection.py =====
+
+from ultralytics import YOLO
+from collections import Counter
+import os
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "yolov8l.pt")
+model = YOLO(MODEL_PATH)
+
+CONFIDENCE_THRESHOLD = 0.60
+
+ALLOWED_OBJECTS = [
+    "bottle", "cup", "bowl", "wine glass",
+    "chair", "couch", "bed", "dining table",
+    "tv", "laptop", "mouse", "remote", "keyboard",
+    "cell phone", "microwave", "oven", "toaster",
+    "refrigerator", "hair drier",
+    "book", "clock", "vase", "scissors",
+    "backpack", "suitcase", "umbrella", "handbag",
+    "fork", "knife", "spoon"
+]
+
+
+def detect_object(image_paths):
+
+    labels = []
+
+    for image_path in image_paths:
+        results = model(image_path, verbose=False)
+
+        for r in results:
+            if not r.boxes:
+                continue
+
+            for box in r.boxes:
+
+                conf = float(box.conf[0])
+                cls_id = int(box.cls[0])
+                label = model.names.get(cls_id)
+
+                if (
+                    conf >= CONFIDENCE_THRESHOLD
+                    and label in ALLOWED_OBJECTS
+                ):
+                    labels.append(label)
+
+    if not labels:
+        return "unknown"
+
+    return Counter(labels).most_common(1)[0][0]
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\step_service.py =====
+
+import os
+import json
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# Load environment variables
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise ValueError("OPENAI_API_KEY not found. Check your .env file location.")
+
+client = OpenAI(api_key=api_key)
+
+
+def generate_steps(idea_title: str):
+    """
+    Generates structured step-by-step instructions
+    for a selected reuse idea.
+    """
+
+    prompt = f"""
+You are an expert DIY instructor.
+
+Create detailed, beginner-friendly step-by-step instructions for:
+
+{idea_title}
+
+For each step include:
+- step_number
+- instruction
+- tools_required
+- image_prompt (clear description for generating illustration image)
+
+Rules:
+- Keep steps realistic
+- Use simple tools
+- Make it safe
+- 5â€“8 steps maximum
+
+Return JSON ONLY in this format:
+
+[
+  {{
+    "step_number": 1,
+    "instruction": "",
+    "tools_required": "",
+    "image_prompt": ""
+  }}
+]
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7
+    )
+
+    content = response.choices[0].message.content
+
+    # Ensure valid JSON is returned
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        # If AI slightly misformats JSON, return raw text for debugging
+        return {
+            "error": "Invalid JSON returned by AI",
+            "raw_response": content
+        }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\__init__.py =====
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\train_material_model.py
+
+import torch
+from torchvision import datasets, models, transforms
+import torch.nn as nn
+import torch.optim as optim
+import os
+
+print("Starting training script...")
+
+DATASET_DIR = "material_dataset"
+EPOCHS = 5
+BATCH_SIZE = 32
+MODEL_OUT = "efficientnet_material.pth"
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using device:", device)
+
+# Transforms
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+# Dataset paths
+train_path = os.path.join(DATASET_DIR, "train")
+val_path = os.path.join(DATASET_DIR, "val")
+
+print("Loading dataset from:", train_path)
+
+train_ds = datasets.ImageFolder(train_path, transform=transform)
+val_ds = datasets.ImageFolder(val_path, transform=transform)
+
+print("Classes found:", train_ds.classes)
+print("Training images:", len(train_ds))
+print("Validation images:", len(val_ds))
+
+train_loader = torch.utils.data.DataLoader(
+    train_ds, batch_size=BATCH_SIZE, shuffle=True
+)
+
+# Model
+model = models.efficientnet_b0(pretrained=True)
+model.classifier[1] = nn.Linear(
+    model.classifier[1].in_features,
+    len(train_ds.classes)
+)
+model.to(device)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.0003)
+
+# Training loop
+for epoch in range(EPOCHS):
+    model.train()
+    total_loss = 0
+
+    for images, labels in train_loader:
+        images, labels = images.to(device), labels.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        total_loss += loss.item()
+
+    print(f"Epoch {epoch+1}/{EPOCHS} - Loss: {total_loss:.4f}")
+
+# Save model
+torch.save(model.state_dict(), MODEL_OUT)
+print("Training complete. Model saved as:", MODEL_OUT)
+
+

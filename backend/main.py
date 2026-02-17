@@ -1,12 +1,13 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 import shutil
 import os
-from typing import List, Dict
-from backend.object_analysis import analyze_single_object
 
-# 🔹 NEW IMPORTS FOR AI
+from backend.object_analysis import analyze_single_object
 from backend.llm_service import generate_reuse_ideas
 from backend.step_service import generate_steps
+
+print("🔥 THIS BACKEND VERSION IS RUNNING")
 
 app = FastAPI()
 
@@ -15,53 +16,83 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # =====================================================
-# EXISTING ENDPOINT (UNCHANGED)
+# UNLIMITED OBJECTS ANALYZE SESSION
 # =====================================================
 @app.post("/analyze-session")
-async def analyze_session(
-    files: List[UploadFile] = File(...),
-    object_ids: List[str] = Form(...),
-    view_types: List[str] = Form(...)
-):
+async def analyze_session(request: Request):
+
     print("\n===== ANALYZE SESSION CALLED =====")
-    print(f"Files received: {len(files)}")
 
-    object_groups: Dict[str, List[str]] = {}
+    try:
+        form = await request.form()
+        files = form.getlist("files")
 
-    for file, obj_id, view in zip(files, object_ids, view_types):
-        obj_dir = os.path.join(UPLOAD_DIR, obj_id)
-        os.makedirs(obj_dir, exist_ok=True)
+        print("Raw form keys:", list(form.keys()))
+        print("Files received:", len(files))
 
-        filename = f"{view}_{file.filename}"
-        path = os.path.join(obj_dir, filename)
+        if len(files) == 0:
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": False,
+                    "objects": [],
+                    "error": "No files received"
+                }
+            )
 
-        with open(path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        analyzed_objects = []
 
-        object_groups.setdefault(obj_id, []).append(path)
+        for i, file in enumerate(files):
 
-    print("Received objects:")
-    for obj_id, paths in object_groups.items():
-        print(obj_id, len(paths))
-        for p in paths:
-            print(" ", p)
+            object_id = f"object_{i+1}"
+            obj_dir = os.path.join(UPLOAD_DIR, object_id)
+            os.makedirs(obj_dir, exist_ok=True)
 
-    analyzed_objects = []
+            file_path = os.path.join(obj_dir, file.filename)
 
-    for obj_id, paths in object_groups.items():
-        analysis = analyze_single_object(paths)
-        if analysis:
-            analysis["object_id"] = obj_id
-            analyzed_objects.append(analysis)
+            with open(file_path, "wb") as buffer:
+                buffer.write(await file.read())
 
-    return {
-        "objects": analyzed_objects,
-       
-    }
+            print("Saved:", file_path)
+
+            height = form.get(f"height_cm_{i}")
+            width = form.get(f"width_cm_{i}")
+            depth = form.get(f"depth_cm_{i}")
+
+            print("Height:", height)
+            print("Width:", width)
+            print("Depth:", depth)
+
+            analysis = analyze_single_object([file_path])
+
+            if analysis:
+                analysis["object_id"] = object_id
+                analysis["dimensions"] = {
+                    "height_cm": height,
+                    "width_cm": width,
+                    "depth_cm": depth
+                }
+                analyzed_objects.append(analysis)
+
+        return {
+            "success": True,
+            "objects": analyzed_objects
+        }
+
+    except Exception as e:
+        print("🔥 BACKEND ERROR:", str(e))
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": False,
+                "objects": [],
+                "error": str(e)
+            }
+        )
 
 
 # =====================================================
-# NEW AI ENDPOINT 1 — LLM Categorized Ideas
+# AI REUSE IDEAS
 # =====================================================
 @app.post("/generate-reuse-ai")
 async def generate_reuse_ai(data: dict):
@@ -69,12 +100,11 @@ async def generate_reuse_ai(data: dict):
     print("\n===== LLM REUSE GENERATION CALLED =====")
 
     result = generate_reuse_ideas(data)
-
     return result
 
 
 # =====================================================
-# NEW AI ENDPOINT 2 — Detailed Step Generation
+# STEP GENERATION
 # =====================================================
 @app.post("/generate-steps")
 async def generate_reuse_steps(data: dict):
@@ -87,7 +117,6 @@ async def generate_reuse_steps(data: dict):
     print(f"\n===== GENERATING STEPS FOR: {idea} =====")
 
     steps = generate_steps(idea)
-
     return steps
 
 

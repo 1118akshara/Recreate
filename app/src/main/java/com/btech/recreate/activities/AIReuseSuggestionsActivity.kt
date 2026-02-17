@@ -9,6 +9,7 @@ import com.btech.recreate.R
 import com.btech.recreate.network.BackendApi
 import org.json.JSONObject
 import androidx.appcompat.app.AlertDialog
+import org.json.JSONArray
 
 class AIReuseSuggestionsActivity : AppCompatActivity() {
 

@@ -5,6 +5,7 @@
     <!-- Permissions -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA"/>
 
     <!-- Camera hardware declaration -->
     <uses-feature
@@ -17,7 +18,7 @@
 
     <uses-feature
         android:name="android.hardware.camera.autofocus"
-        android:required="false" />
+        android:required="true" />
 
     <application
         android:allowBackup="true"
@@ -26,6 +27,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.RECREATE"
         android:usesCleartextTraffic="true">
+
 
         <!-- ARCore requirement -->
         <meta-data
@@ -61,10 +63,7 @@
             android:name=".activities.ScanSummaryActivity"
             android:exported="false" />
 
-        <!-- Image Preview -->
-        <activity
-            android:name=".activities.ImagePreviewActivity"
-            android:exported="false" />
+
 
         <!-- Analysis Result -->
         <activity

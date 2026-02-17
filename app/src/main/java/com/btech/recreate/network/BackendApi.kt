@@ -1,44 +1,58 @@
 package com.btech.recreate.network
 
-import android.util.Log
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import com.btech.recreate.data.ObjectScanSession
 
 object BackendApi {
 
     private val client = OkHttpClient()
 
     /* ==========================================================
-       1️⃣ ANALYZE SESSION (YOLO + EfficientNet)
+       1️⃣ UPLOAD SESSION (YOLO + EfficientNet)
      ========================================================== */
 
-    fun uploadMultipleObjects(
-        objectImageMap: Map<String, Map<String, File>>,
+    fun uploadSession(
+        objects: List<ObjectScanSession>,
         onResult: (String?) -> Unit
     ) {
 
         val multipart = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
 
-        for ((objectId, views) in objectImageMap) {
-            for ((viewType, file) in views) {
+        objects.forEachIndexed { index, obj ->
 
-                multipart.addFormDataPart("object_ids", objectId)
-                multipart.addFormDataPart("view_types", viewType)
+            val file = File(obj.imagePath ?: return@forEachIndexed)
+            if (!file.exists()) return@forEachIndexed
 
-                val body = file
-                    .asRequestBody("image/jpeg".toMediaType())
+            val body =
+                file.asRequestBody("image/jpeg".toMediaType())
 
-                multipart.addFormDataPart(
-                    "files",
-                    file.name,
-                    body
-                )
-            }
+            // IMPORTANT: must match FastAPI
+            multipart.addFormDataPart(
+                "files",
+                file.name,
+                body
+            )
+
+            multipart.addFormDataPart(
+                "height_cm_$index",
+                obj.heightCm?.toString() ?: ""
+            )
+
+            multipart.addFormDataPart(
+                "width_cm_$index",
+                obj.widthCm?.toString() ?: ""
+            )
+
+            multipart.addFormDataPart(
+                "depth_cm_$index",
+                obj.depthCm?.toString() ?: ""
+            )
         }
 
         val request = Request.Builder()
@@ -67,10 +81,8 @@ object BackendApi {
         onResult: (String?) -> Unit
     ) {
 
-        val mediaType = "application/json".toMediaType()
-
         val body = RequestBody.create(
-            mediaType,
+            "application/json".toMediaType(),
             analysisJson
         )
 

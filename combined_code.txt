@@ -1,0 +1,2606 @@
+﻿
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\AIReuseDetailActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.os.Bundle
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+import com.btech.recreate.network.BackendApi
+import org.json.JSONArray
+
+class AIReuseDetailActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_ai_reuse_detail)
+
+        val idea = intent.getStringExtra("idea_title")
+
+        findViewById<TextView>(R.id.txtIdeaTitle).text = idea
+
+        if (idea == null) return
+
+        BackendApi.generateSteps(idea) { result ->
+
+            runOnUiThread {
+
+                if (result == null) {
+                    findViewById<TextView>(R.id.txtSteps).text =
+                        "Failed to load steps"
+                    return@runOnUiThread
+                }
+
+                try {
+                    val array = JSONArray(result)
+
+                    val builder = StringBuilder()
+
+                    for (i in 0 until array.length()) {
+                        val step = array.getJSONObject(i)
+
+                        builder.append("Step ${step.getInt("step_number")}\n")
+                        builder.append(step.getString("instruction"))
+                        builder.append("\n\n")
+                    }
+
+                    findViewById<TextView>(R.id.txtSteps).text =
+                        builder.toString()
+
+                } catch (e: Exception) {
+                    findViewById<TextView>(R.id.txtSteps).text =
+                        "Invalid step response"
+                }
+            }
+        }
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\AIReuseSuggestionsActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.ArrayAdapter
+import android.widget.ListView
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+import com.btech.recreate.network.BackendApi
+import org.json.JSONObject
+import androidx.appcompat.app.AlertDialog
+import org.json.JSONArray
+
+class AIReuseSuggestionsActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_ai_reuse_suggestions)
+
+        title = "Reuse Suggestions"
+
+        val analysisJson = intent.getStringExtra("analysis_json")
+
+        if (analysisJson == null) {
+            showError("No analysis data found")
+            return
+        }
+
+        BackendApi.generateAIReuseIdeas(analysisJson) { result ->
+
+            runOnUiThread {
+
+                if (result == null) {
+                    showError("Failed to get AI suggestions")
+                    return@runOnUiThread
+                }
+
+                try {
+                    val json = JSONObject(result)
+
+                    val easy = json.getJSONArray("easy")
+                    val moderate = json.getJSONArray("moderate")
+                    val hard = json.getJSONArray("very_hard")
+
+                    setupList(R.id.listEasy, easy)
+                    setupList(R.id.listModerate, moderate)
+                    setupList(R.id.listHard, hard)
+
+                } catch (e: Exception) {
+                    showError("Invalid AI response")
+                }
+            }
+        }
+    }
+
+    private fun setupList(listId: Int, array: org.json.JSONArray) {
+
+        val listView = findViewById<ListView>(listId)
+
+        val titles = mutableListOf<String>()
+
+        for (i in 0 until array.length()) {
+            titles.add(array.getJSONObject(i).getString("title"))
+        }
+
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            titles
+        )
+
+        listView.adapter = adapter
+
+        listView.setOnItemClickListener { _, _, position, _ ->
+
+            val intent = Intent(
+                this,
+                AIReuseDetailActivity::class.java
+            )
+
+            intent.putExtra("idea_title", titles[position])
+            startActivity(intent)
+        }
+    }
+
+    private fun showError(message: String) {
+        AlertDialog.Builder(this)
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\AnalysisResultActivity2.kt =====
+
+package com.btech.recreate.activities
+
+import android.os.Bundle
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+import org.json.JSONObject
+
+class AnalysisResultActivity2 : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_analysis_result2)
+
+        val result = intent.getStringExtra("analysis_json") ?: return
+
+        val json = JSONObject(result)
+        val objects = json.getJSONArray("objects")
+
+        val first = objects.getJSONObject(0)
+
+        findViewById<TextView>(R.id.txtObjectName)
+            .text = "Object: ${first.getString("object")}"
+
+        findViewById<TextView>(R.id.txtMaterial)
+            .text = "Material: ${first.getString("material")}"
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\ARScanActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.graphics.Bitmap
+import android.os.Bundle
+import android.os.Environment
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+import com.btech.recreate.ar.ARImageUtil
+import com.btech.recreate.ar.ARRulerManager
+import com.btech.recreate.data.ObjectScanSession
+import com.btech.recreate.data.ScanRepository
+import com.google.ar.core.Plane
+import com.google.ar.sceneform.ux.ArFragment
+import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
+
+class ARScanActivity : AppCompatActivity(),
+    ARRulerManager.MeasurementListener {
+
+    private lateinit var arFragment: ArFragment
+    private lateinit var txtInstruction: TextView
+    private lateinit var txtObjectInfo: TextView
+    private lateinit var txtLiveMeasurement: TextView
+    private lateinit var btnCapture: Button
+    private lateinit var rulerManager: ARRulerManager
+
+    private var measurementStep = 0
+    private var objectCount = 1
+
+    private var currentObject =
+        ObjectScanSession(UUID.randomUUID().toString())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_ar_scan)
+
+        objectCount = ScanRepository.scannedObjects.size + 1
+
+        arFragment =
+            supportFragmentManager.findFragmentById(R.id.arFragment) as ArFragment
+
+        txtInstruction = findViewById(R.id.txt_instruction)
+        txtObjectInfo = findViewById(R.id.txt_object_info)
+        txtLiveMeasurement = findViewById(R.id.txt_live_measurement)
+        btnCapture = findViewById(R.id.btn_capture_view)
+
+        rulerManager = ARRulerManager(this, arFragment, this)
+
+        // âœ… DO NOT MODIFY SESSION HERE
+
+        arFragment.setOnTapArPlaneListener { hitResult, plane, _ ->
+
+            if (measurementStep < 3 &&
+                (plane.type == Plane.Type.HORIZONTAL_UPWARD_FACING ||
+                        plane.type == Plane.Type.VERTICAL)
+            ) {
+                rulerManager.addPoint(hitResult)
+            }
+        }
+
+        btnCapture.setOnClickListener {
+            if (measurementStep < 3) {
+                Toast.makeText(
+                    this,
+                    "Complete all measurements first",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                captureImage()
+            }
+        }
+
+        updateUI()
+    }
+
+    override fun onMeasured(distanceCm: Float) {
+
+        txtLiveMeasurement.text = "%.2f cm".format(distanceCm)
+
+        when (measurementStep) {
+            0 -> currentObject.heightCm = distanceCm
+            1 -> currentObject.widthCm = distanceCm
+            2 -> currentObject.depthCm = distanceCm
+        }
+
+        measurementStep++
+        updateUI()
+    }
+
+    private fun updateUI() {
+
+        txtObjectInfo.text = "Object $objectCount"
+
+        when (measurementStep) {
+            0 -> txtInstruction.text = "Measure Height (tap two points)"
+            1 -> txtInstruction.text = "Measure Width (tap two points)"
+            2 -> txtInstruction.text = "Measure Depth (tap two points)"
+            else -> {
+                txtInstruction.text = "All dimensions captured\nTap Capture Image"
+                btnCapture.isEnabled = true
+            }
+        }
+    }
+
+    private fun captureImage() {
+
+        ARImageUtil.capture(this, arFragment.arSceneView) { bitmap ->
+
+            if (bitmap == null) {
+                Toast.makeText(this, "Capture failed", Toast.LENGTH_SHORT).show()
+                return@capture
+            }
+
+            val imagePath = saveBitmap(bitmap)
+            currentObject.imagePath = imagePath
+
+            ScanRepository.scannedObjects.add(currentObject)
+
+            Toast.makeText(this, "Object $objectCount saved!", Toast.LENGTH_SHORT).show()
+
+            startActivity(Intent(this, ScanSummaryActivity::class.java))
+            finish()
+        }
+    }
+
+    private fun saveBitmap(bitmap: Bitmap): String {
+
+        val dir = File(
+            getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+            "recreate_scans"
+        )
+        if (!dir.exists()) dir.mkdirs()
+
+        val file = File(dir, "obj${objectCount}.jpg")
+
+        FileOutputStream(file).use {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
+        }
+
+        return file.absolutePath
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\HomeActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+
+class HomeActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // THIS LINE IS REQUIRED
+        setContentView(R.layout.activity_home)
+
+        findViewById<Button>(R.id.btn_scan).setOnClickListener {
+            startActivity(Intent(this, ARScanActivity::class.java))
+        }
+
+        findViewById<Button>(R.id.btn_saved).setOnClickListener {
+            startActivity(Intent(this, SavedProjectsActivity::class.java))
+        }
+
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\SavedProjectsActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+
+class SavedProjectsActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_saved_projects)
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\ScanSummaryActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
+import com.btech.recreate.data.ScanRepository
+import com.btech.recreate.network.BackendApi
+import org.json.JSONObject
+
+class ScanSummaryActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val scrollView = ScrollView(this)
+        val rootLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 24, 24, 24)
+        }
+        scrollView.addView(rootLayout)
+
+        val title = TextView(this).apply {
+            text = "Scan Summary"
+            textSize = 22f
+            setPadding(0, 0, 0, 24)
+        }
+
+        rootLayout.addView(title)
+
+        // Show all scanned objects
+        ScanRepository.scannedObjects.forEachIndexed { index, obj ->
+
+            val card = CardView(this).apply {
+                radius = 20f
+                cardElevation = 8f
+                useCompatPadding = true
+                setContentPadding(24, 24, 24, 24)
+            }
+
+            val content = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+
+            val header = TextView(this).apply {
+                text = "Object ${index + 1}"
+                textSize = 18f
+            }
+
+            val dimensionText = TextView(this).apply {
+                text = """
+                    Height: ${"%.2f".format(obj.heightCm ?: 0f)} cm
+                    Width: ${"%.2f".format(obj.widthCm ?: 0f)} cm
+                    Depth: ${"%.2f".format(obj.depthCm ?: 0f)} cm
+                """.trimIndent()
+                textSize = 15f
+                setPadding(0, 12, 0, 12)
+            }
+
+            content.addView(header)
+            content.addView(dimensionText)
+
+            card.addView(content)
+            rootLayout.addView(card)
+        }
+
+        val analyzeButton = Button(this).apply {
+            text = "Analyze Objects (AI)"
+            setOnClickListener {
+
+                if (ScanRepository.scannedObjects.isEmpty()) {
+                    Toast.makeText(
+                        this@ScanSummaryActivity,
+                        "No objects to analyze",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                BackendApi.uploadSession(
+                    ScanRepository.scannedObjects
+                ) { response ->
+
+                    runOnUiThread {
+
+                        if (response == null) {
+                            Toast.makeText(
+                                this@ScanSummaryActivity,
+                                "No response from server",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@runOnUiThread
+                        }
+
+                        try {
+                            val json = JSONObject(response)
+
+                            val intent = Intent(
+                                this@ScanSummaryActivity,
+                                AnalysisResultActivity2::class.java
+                            )
+
+                            intent.putExtra(
+                                "analysis_json",
+                                json.toString()
+                            )
+
+                            startActivity(intent)
+
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                this@ScanSummaryActivity,
+                                "Invalid response from server",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
+
+        rootLayout.addView(analyzeButton)
+        setContentView(scrollView)
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\activities\SplashActivity.kt =====
+
+package com.btech.recreate.activities
+
+import android.content.Intent
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import androidx.appcompat.app.AppCompatActivity
+import com.btech.recreate.R
+
+class SplashActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_splash)
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            startActivity(Intent(this, HomeActivity::class.java))
+            finish()
+        }, 2000) // 2 seconds
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\ar\ARImageUtil.kt =====
+
+package com.btech.recreate.ar
+
+import android.app.Activity
+import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
+import android.view.PixelCopy
+import com.google.ar.sceneform.ArSceneView
+
+object ARImageUtil {
+
+    fun capture(
+        activity: Activity,
+        view: ArSceneView,
+        callback: (Bitmap?) -> Unit
+    ) {
+        val bitmap =
+            Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+
+        PixelCopy.request(
+            view,
+            bitmap,
+            { result ->
+                if (result == PixelCopy.SUCCESS) {
+                    callback(bitmap)
+                } else {
+                    callback(null)
+                }
+            },
+            Handler(Looper.getMainLooper())
+        )
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\ar\ARRulerManager.kt =====
+
+package com.btech.recreate.ar
+
+import android.animation.ValueAnimator
+import android.content.Context
+import android.view.animation.LinearInterpolator
+import com.google.ar.core.HitResult
+import com.google.ar.sceneform.AnchorNode
+import com.google.ar.sceneform.Node
+import com.google.ar.sceneform.math.Quaternion
+import com.google.ar.sceneform.math.Vector3
+import com.google.ar.sceneform.rendering.Color
+import com.google.ar.sceneform.rendering.MaterialFactory
+import com.google.ar.sceneform.rendering.ShapeFactory
+import com.google.ar.sceneform.ux.ArFragment
+
+class ARRulerManager(
+    private val context: Context,
+    private val arFragment: ArFragment,
+    private val listener: MeasurementListener
+) {
+
+    interface MeasurementListener {
+        fun onMeasured(distanceCm: Float)
+    }
+
+    private var firstPoint: AnchorNode? = null
+    private var secondPoint: AnchorNode? = null
+    private var lineNode: Node? = null
+    private var animator: ValueAnimator? = null
+
+    fun addPoint(hitResult: HitResult) {
+
+        if (firstPoint != null && secondPoint != null) {
+            clear()
+        }
+
+        val anchor = hitResult.createAnchor()
+        val anchorNode = AnchorNode(anchor)
+        anchorNode.setParent(arFragment.arSceneView.scene)
+
+        MaterialFactory.makeOpaqueWithColor(
+            context,
+            Color(android.graphics.Color.RED)
+        ).thenAccept { material ->
+            val sphere = ShapeFactory.makeSphere(
+                0.015f,
+                Vector3.zero(),
+                material
+            )
+            anchorNode.renderable = sphere
+        }
+
+        if (firstPoint == null) {
+            firstPoint = anchorNode
+        } else {
+            secondPoint = anchorNode
+            drawLine()
+        }
+    }
+
+    private fun drawLine() {
+
+        val start = firstPoint!!.worldPosition
+        val end = secondPoint!!.worldPosition
+
+        val difference = Vector3.subtract(end, start)
+        val distanceMeters = difference.length()
+        val distanceCm = distanceMeters * 100f
+
+        val midpoint = Vector3.add(start, end).scaled(0.5f)
+
+        MaterialFactory.makeOpaqueWithColor(
+            context,
+            Color(android.graphics.Color.YELLOW)
+        ).thenAccept { material ->
+
+            val cylinder = ShapeFactory.makeCylinder(
+                0.004f,
+                distanceMeters,
+                Vector3.zero(),
+                material
+            )
+
+            lineNode = Node()
+            lineNode!!.setParent(arFragment.arSceneView.scene)
+            lineNode!!.renderable = cylinder
+            lineNode!!.worldPosition = midpoint
+
+            val direction = difference.normalized()
+            val rotation = Quaternion.rotationBetweenVectors(
+                Vector3(0f, 1f, 0f),
+                direction
+            )
+
+            lineNode!!.worldRotation = rotation
+
+            startGlow(material)
+        }
+
+        listener.onMeasured(distanceCm)
+    }
+
+    private fun startGlow(material: com.google.ar.sceneform.rendering.Material) {
+
+        animator = ValueAnimator.ofFloat(0.5f, 1f)
+        animator?.duration = 1000
+        animator?.repeatCount = ValueAnimator.INFINITE
+        animator?.repeatMode = ValueAnimator.REVERSE
+        animator?.interpolator = LinearInterpolator()
+
+        animator?.addUpdateListener {
+            val value = it.animatedValue as Float
+            material.setFloat3("baseColorTint", value, value, 0f)
+        }
+
+        animator?.start()
+    }
+
+    fun clear() {
+        animator?.cancel()
+        animator = null
+        firstPoint?.setParent(null)
+        secondPoint?.setParent(null)
+        lineNode?.setParent(null)
+        firstPoint = null
+        secondPoint = null
+        lineNode = null
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\ar\CustomArFragment.kt =====
+
+package com.btech.recreate.ar
+
+import com.google.ar.core.Config
+import com.google.ar.core.Session
+import com.google.ar.sceneform.ux.ArFragment
+
+class CustomArFragment : ArFragment() {
+
+    override fun getSessionConfiguration(session: Session): Config {
+
+        val config = super.getSessionConfiguration(session)
+
+        config.planeFindingMode =
+            Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+
+        config.instantPlacementMode =
+            Config.InstantPlacementMode.LOCAL_Y_UP
+
+        config.depthMode =
+            if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC))
+                Config.DepthMode.AUTOMATIC
+            else
+                Config.DepthMode.DISABLED
+
+        this.arSceneView.setupSession(session)
+
+        // ðŸ”¥ VERY IMPORTANT FOR WHITE DOTS
+        planeDiscoveryController.show()
+        planeDiscoveryController.setInstructionView(null)
+
+        return config
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\data\ObjectScanSession.kt =====
+
+package com.btech.recreate.data
+
+data class ObjectScanSession(
+    val objectId: String,
+    var imagePath: String? = null,
+    var heightCm: Float? = null,
+    var widthCm: Float? = null,
+    var depthCm: Float? = null
+)
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\data\ScanRepository.kt =====
+
+package com.btech.recreate.data
+
+object ScanRepository {
+    val scannedObjects = mutableListOf<ObjectScanSession>()
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\network\BackendApi.kt =====
+
+package com.btech.recreate.network
+
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONObject
+import java.io.File
+import java.io.IOException
+import com.btech.recreate.data.ObjectScanSession
+
+object BackendApi {
+
+    private val client = OkHttpClient()
+
+    /* ==========================================================
+       1ï¸âƒ£ UPLOAD SESSION (YOLO + EfficientNet)
+     ========================================================== */
+
+    fun uploadSession(
+        objects: List<ObjectScanSession>,
+        onResult: (String?) -> Unit
+    ) {
+
+        val multipart = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+
+        objects.forEachIndexed { index, obj ->
+
+            val file = File(obj.imagePath ?: return@forEachIndexed)
+            if (!file.exists()) return@forEachIndexed
+
+            val body =
+                file.asRequestBody("image/jpeg".toMediaType())
+
+            // IMPORTANT: must match FastAPI
+            multipart.addFormDataPart(
+                "files",
+                file.name,
+                body
+            )
+
+            multipart.addFormDataPart(
+                "height_cm_$index",
+                obj.heightCm?.toString() ?: ""
+            )
+
+            multipart.addFormDataPart(
+                "width_cm_$index",
+                obj.widthCm?.toString() ?: ""
+            )
+
+            multipart.addFormDataPart(
+                "depth_cm_$index",
+                obj.depthCm?.toString() ?: ""
+            )
+        }
+
+        val request = Request.Builder()
+            .url("${ServerConfig.BASE_URL}/analyze-session")
+            .post(multipart.build())
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                onResult(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                onResult(response.body?.string())
+            }
+        })
+    }
+
+    /* ==========================================================
+       2ï¸âƒ£ GENERATE AI REUSE IDEAS
+     ========================================================== */
+
+    fun generateAIReuseIdeas(
+        analysisJson: String,
+        onResult: (String?) -> Unit
+    ) {
+
+        val body = RequestBody.create(
+            "application/json".toMediaType(),
+            analysisJson
+        )
+
+        val request = Request.Builder()
+            .url("${ServerConfig.BASE_URL}/generate-reuse-ai")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                onResult(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                onResult(response.body?.string())
+            }
+        })
+    }
+
+    /* ==========================================================
+       3ï¸âƒ£ GENERATE STEPS
+     ========================================================== */
+
+    fun generateSteps(
+        ideaTitle: String,
+        onResult: (String?) -> Unit
+    ) {
+
+        val json = JSONObject()
+        json.put("idea", ideaTitle)
+
+        val body = RequestBody.create(
+            "application/json".toMediaType(),
+            json.toString()
+        )
+
+        val request = Request.Builder()
+            .url("${ServerConfig.BASE_URL}/generate-steps")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: IOException) {
+                onResult(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                onResult(response.body?.string())
+            }
+        })
+    }
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\java\com\btech\recreate\network\ServerConfig.kt =====
+
+package com.btech.recreate.network
+
+object ServerConfig {
+
+    // Change this IP when needed
+    var BASE_URL = "http://192.168.20.10:8000"
+
+}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\avatar_bg.xml =====
+
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#EEF2FF"/>
+    <corners android:radius="16dp"/>
+</shape>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\baseline_camera_alt_24.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:height="24dp" android:tint="#000000" android:viewportHeight="24" android:viewportWidth="24" android:width="24dp">
+      
+    <path android:fillColor="@android:color/white" android:pathData="M12,12m-3.2,0a3.2,3.2 0,1 1,6.4 0a3.2,3.2 0,1 1,-6.4 0"/>
+      
+    <path android:fillColor="@android:color/white" android:pathData="M9,2L7.17,4L4,4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2L22,6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2L9,2zM12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5 5,2.24 5,5 -2.24,5 -5,5z"/>
+    
+</vector>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\bg_capture_button.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources><shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFF"/>
+    <corners android:radius="36dp"/>
+</shape>
+</resources>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\bg_scan_hint.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources><shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#66000000"/>
+    <corners android:radius="12dp"/>
+</shape>
+</resources>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\bounding_box_outline.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent" />
+
+    <stroke
+        android:width="3dp"
+        android:color="#00FF00" />
+
+    <corners android:radius="4dp" />
+</shape>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\hero_card_bg.xml =====
+
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:startColor="#4F46E5"
+        android:endColor="#4338CA"
+        android:angle="45"/>
+    <corners android:radius="32dp"/>
+</shape>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\ic_camera.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources></resources>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\ic_launcher_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#3DDC84"
+        android:pathData="M0,0h108v108h-108z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M9,0L9,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,0L19,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M29,0L29,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M39,0L39,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M49,0L49,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M59,0L59,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M69,0L69,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M79,0L79,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M89,0L89,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M99,0L99,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,9L108,9"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,19L108,19"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,29L108,29"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,39L108,39"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,49L108,49"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,59L108,59"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,69L108,69"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,79L108,79"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,89L108,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,99L108,99"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,29L89,29"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,39L89,39"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,49L89,49"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,59L89,59"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,69L89,69"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,79L89,79"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M29,19L29,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M39,19L39,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M49,19L49,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M59,19L59,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M69,19L69,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M79,19L79,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+</vector>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\ic_launcher_foreground.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="85.84757"
+                android:endY="92.4963"
+                android:startX="42.9492"
+                android:startY="49.59793"
+                android:type="linear">
+                <item
+                    android:color="#44000000"
+                    android:offset="0.0" />
+                <item
+                    android:color="#00000000"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="nonZero"
+        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328L64.6,57.328z"
+        android:strokeWidth="1"
+        android:strokeColor="#00000000" />
+</vector>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\recreate_logo_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector
+    android:height="108dp"
+    android:width="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <path android:fillColor="#3DDC84"
+          android:pathData="M0,0h108v108h-108z"/>
+    <path android:fillColor="#00000000" android:pathData="M9,0L9,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,0L19,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M29,0L29,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M39,0L39,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M49,0L49,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M59,0L59,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M69,0L69,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M79,0L79,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M89,0L89,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M99,0L99,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,9L108,9"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,19L108,19"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,29L108,29"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,39L108,39"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,49L108,49"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,59L108,59"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,69L108,69"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,79L108,79"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,89L108,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,99L108,99"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,29L89,29"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,39L89,39"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,49L89,49"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,59L89,59"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,69L89,69"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,79L89,79"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M29,19L29,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M39,19L39,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M49,19L49,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M59,19L59,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M69,19L69,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M79,19L79,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+</vector>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\recreate_logo_foreground.xml =====
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startY="49.59793"
+                android:startX="42.9492"
+                android:endY="92.4963"
+                android:endX="85.84757"
+                android:type="linear">
+                <item
+                    android:color="#44000000"
+                    android:offset="0.0" />
+                <item
+                    android:color="#00000000"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328L64.6,57.328z"
+        android:fillColor="#FFFFFF"
+        android:fillType="nonZero"
+        android:strokeWidth="1"
+        android:strokeColor="#00000000"/>
+</vector>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\recreate_word_background.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<vector
+    android:height="108dp"
+    android:width="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <path android:fillColor="#3DDC84"
+          android:pathData="M0,0h108v108h-108z"/>
+    <path android:fillColor="#00000000" android:pathData="M9,0L9,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,0L19,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M29,0L29,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M39,0L39,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M49,0L49,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M59,0L59,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M69,0L69,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M79,0L79,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M89,0L89,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M99,0L99,108"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,9L108,9"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,19L108,19"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,29L108,29"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,39L108,39"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,49L108,49"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,59L108,59"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,69L108,69"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,79L108,79"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,89L108,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M0,99L108,99"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,29L89,29"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,39L89,39"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,49L89,49"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,59L89,59"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,69L89,69"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M19,79L89,79"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M29,19L29,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M39,19L39,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M49,19L49,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M59,19L59,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M69,19L69,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+    <path android:fillColor="#00000000" android:pathData="M79,19L79,89"
+          android:strokeColor="#33FFFFFF" android:strokeWidth="0.8"/>
+</vector>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\reticle_circle.xml =====
+
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/transparent"/>
+    <stroke
+        android:width="2dp"
+        android:color="#FFFFFF"/>
+    <corners android:radius="100dp"/>
+</shape>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\splash_logo_bg.xml =====
+
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFF"/>
+    <corners android:radius="24dp"/>
+</shape>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\drawable\stat_card_bg.xml =====
+
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFF"/>
+    <corners android:radius="24dp"/>
+    <stroke
+        android:width="1dp"
+        android:color="#E5E7EB"/>
+</shape>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_ai_reuse_detail.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/txtIdeaTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Idea Title"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <TextView
+            android:id="@+id/txtSteps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Steps will appear here"
+            android:textSize="16sp"/>
+
+    </LinearLayout>
+</ScrollView>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_ai_reuse_suggestions.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FAFAFA"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- PAGE TITLE -->
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reuse Suggestions"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:paddingBottom="16dp"/>
+
+        <!-- EASY -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Easy"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"/>
+
+        <ListView
+            android:id="@+id/listEasy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:dividerHeight="8dp"/>
+
+        <!-- MODERATE -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Moderate"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:layout_marginTop="16dp"/>
+
+        <ListView
+            android:id="@+id/listModerate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:dividerHeight="8dp"/>
+
+        <!-- VERY HARD -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Very Hard"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#2E7D32"
+            android:layout_marginTop="16dp"/>
+
+        <ListView
+            android:id="@+id/listHard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:dividerHeight="8dp"/>
+
+    </LinearLayout>
+</ScrollView>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_analysis_result2.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/txtTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Analysis Result"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:id="@+id/txtObjectName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Object:"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/txtMaterial"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Material:"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
+    </LinearLayout>
+
+</ScrollView>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_ar_scan.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- AR VIEW -->
+    <fragment
+        android:id="@+id/arFragment"
+        android:name="com.btech.recreate.ar.CustomArFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- TOP INFO PANEL -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#66000000">
+
+        <TextView
+            android:id="@+id/txt_object_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Object 1"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/txt_instruction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Measure Height (tap two points)"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:layout_marginTop="6dp" />
+
+    </LinearLayout>
+
+    <!-- LIVE MEASUREMENT DISPLAY -->
+    <TextView
+        android:id="@+id/txt_live_measurement"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0.00 cm"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:background="#88000000"
+        android:padding="16dp"
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_marginBottom="120dp" />
+
+    <!-- CAPTURE BUTTON -->
+    <Button
+        android:id="@+id/btn_capture_view"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Capture Image"
+        android:textAllCaps="false"
+        android:textSize="16sp"
+        android:backgroundTint="#4CAF50"
+        android:textColor="#FFFFFF"
+        android:layout_gravity="bottom"
+        android:layout_margin="16dp" />
+
+</FrameLayout>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_home.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F3F4F6">
+
+    <!-- Scroll Content -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNav">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- HEADER -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="recreate"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="#111827"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Welcome back, User"
+                        android:textSize="14sp"
+                        android:textColor="#6B7280"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:background="@drawable/avatar_bg"
+                    android:text="U"
+                    android:textStyle="bold"
+                    android:textColor="#4F46E5"
+                    android:textSize="18sp"/>
+            </LinearLayout>
+
+            <!-- HERO CARD -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="32dp"
+                android:background="@drawable/hero_card_bg"
+                android:padding="24dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="New Object?"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Scan it now to see what you can build today."
+                    android:textSize="14sp"
+                    android:textColor="#E0E7FF"
+                    android:layout_marginTop="8dp"/>
+
+                <Button
+                    android:id="@+id/btn_scan"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Start Scan"
+                    android:layout_marginTop="24dp"
+                    android:backgroundTint="#FFFFFF"
+                    android:textColor="#4F46E5"/>
+            </LinearLayout>
+
+            <!-- STATS -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="24dp"
+                android:baselineAligned="false">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="100dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/stat_card_bg"
+                    android:padding="16dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="12"
+                        android:textSize="22sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Saved Ideas"
+                        android:textSize="12sp"
+                        android:textColor="#6B7280"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="100dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/stat_card_bg"
+                    android:padding="16dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="4"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="#4F46E5"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Completed"
+                        android:textSize="12sp"
+                        android:textColor="#6B7280"/>
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Navigation -->
+    <LinearLayout
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_alignParentBottom="true"
+        android:background="#FFFFFF"
+        android:elevation="8dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Home"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Scan"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Saved"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Profile"/>
+        <Button
+            android:id="@+id/btn_saved"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Saved Projects"/>
+
+
+    </LinearLayout>
+
+</RelativeLayout>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_object_list.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Saved Objects"
+        android:textSize="20sp"/>
+</LinearLayout>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_saved_projects.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<TextView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:text="Saved Projects will appear here"
+    android:gravity="center"
+    android:textSize="18sp"/>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\layout\activity_splash.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#4F46E5">
+
+    <!-- Center Content -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <!-- Logo Card -->
+        <TextView
+            android:id="@+id/logoBox"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:gravity="center"
+            android:text="R"
+            android:textColor="#4F46E5"
+            android:textSize="40sp"
+            android:textStyle="bold"
+            android:background="@drawable/splash_logo_bg"
+            android:elevation="8dp"/>
+
+        <!-- App Name -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="recreate"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"/>
+
+        <!-- Tagline -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AI UPCYCLING"
+            android:textColor="#E0E7FF"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp"
+            android:letterSpacing="0.3"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+</RelativeLayout>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\menu\bottom_nav_menu.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+</LinearLayout>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\mipmap-anydpi-v26\ic_launcher_round.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\mipmap-anydpi-v26\recreate_logo.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/recreate_logo_background"/>
+    <foreground android:drawable="@drawable/recreate_logo_foreground"/>
+</adaptive-icon>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\mipmap-anydpi-v26\recreate_logo_round.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/recreate_logo_background"/>
+    <foreground android:drawable="@drawable/recreate_logo_foreground"/>
+</adaptive-icon>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\mipmap-anydpi-v26\recreate_word.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/recreate_word_background"/>
+    <foreground android:drawable="@mipmap/recreate_word_foreground"/>
+</adaptive-icon>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\mipmap-anydpi-v26\recreate_word_round.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/recreate_word_background"/>
+    <foreground android:drawable="@mipmap/recreate_word_foreground"/>
+</adaptive-icon>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\values\colors.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="gray">#8A8A8A</color>
+</resources>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\values\strings.xml =====
+
+<resources>
+    <string name="app_name">RECREATE</string>
+</resources>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\values\themes.xml =====
+
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme -->
+    <style name="Theme.RECREATE" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Customize if needed -->
+    </style>
+
+</resources>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\xml\backup_rules.xml =====
+
+<?xml version="1.0" encoding="utf-8"?><!--
+   Sample backup rules file; uncomment and customize as necessary.
+   See https://developer.android.com/guide/topics/data/autobackup
+   for details.
+   Note: This file is ignored for devices older than API 31
+   See https://developer.android.com/about/versions/12/backup-restore
+-->
+<full-backup-content>
+    <!--
+   <include domain="sharedpref" path="."/>
+   <exclude domain="sharedpref" path="device.xml"/>
+-->
+</full-backup-content>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\app\src\main\res\xml\data_extraction_rules.xml =====
+
+<?xml version="1.0" encoding="utf-8"?><!--
+   Sample data extraction rules file; uncomment and customize as necessary.
+   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   for details.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- TODO: Use <include> and <exclude> to control what is backed up.
+        <include .../>
+        <exclude .../>
+        -->
+    </cloud-backup>
+    <!--
+    <device-transfer>
+        <include .../>
+        <exclude .../>
+    </device-transfer>
+    -->
+</data-extraction-rules>
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\ai_prompts.py =====
+
+def reuse_prompt(analysis_json):
+    return f"""
+You are an AI expert in reuse and upcycling.
+
+Detected objects with dimensions and materials:
+{analysis_json}
+
+TASK:
+Generate NEW reuse ideas every time.
+
+CATEGORIES:
+- Easy
+- Moderate
+- Very Hard
+
+RULES:
+- Practical household projects only
+- Difficulty based on steps, tools, precision
+- No repeated ideas
+
+Return ONLY JSON in this format:
+{{
+  "prompt_used": "summary of reasoning",
+  "easy": [
+    {{
+      "title": "",
+      "description": "",
+      "youtube_query": ""
+    }}
+  ],
+  "moderate": [],
+  "very_hard": []
+}}
+"""
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\dimension_estimation.py =====
+
+def estimate_dimensions(bbox_height_px, ref_px=300, ref_height_cm=20):
+    scale = ref_height_cm / ref_px
+    height_cm = bbox_height_px * scale
+
+    return {
+        "height_cm": round(height_cm, 2)
+    }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\efficientnet_material.py =====
+
+import torch
+from torchvision import models, transforms
+from PIL import Image
+import os
+
+# ===============================
+# ORIGINAL TRAINED MATERIAL CLASSES (DO NOT MODIFY COUNT)
+# ===============================
+MATERIAL_CLASSES = [
+    "brick",
+    "carpet",
+    "ceramic",
+    "fabric",
+    "foliage",
+    "food",
+    "glass",
+    "hair",
+    "leather",
+    "metal",
+    "mirror",
+    "other",
+    "painted",
+    "paper",
+    "plastic",
+    "polishedstone",
+    "skin",
+    "sky",
+    "stone",
+    "tile",
+    "wallpaper",
+    "water",
+    "wood"
+]
+
+NUM_CLASSES = len(MATERIAL_CLASSES)
+
+# ===============================
+# ALLOWED MATERIALS FOR REUSE SYSTEM
+# ===============================
+ALLOWED_MATERIALS = [
+    "brick",
+    "carpet",
+    "fabric",
+    "foliage",
+    "food",
+    "glass",
+    "hair",
+    "leather",
+    "metal",
+    "mirror",
+    "other",
+    "painted",
+    "paper",
+    "plastic",
+    "polishedstone",
+    "stone",
+    "wallpaper",
+    "wood"
+]
+
+# ===============================
+# DEVICE
+# ===============================
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# ===============================
+# LOAD EFFICIENTNET
+# ===============================
+material_model = models.efficientnet_b0(weights=None)
+material_model.classifier[1] = torch.nn.Linear(1280, NUM_CLASSES)
+
+BASE_DIR = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(BASE_DIR, "efficientnet_material.pth")
+
+state_dict = torch.load(MODEL_PATH, map_location=device)
+material_model.load_state_dict(state_dict)
+
+material_model.to(device)
+material_model.eval()
+
+# ===============================
+# IMAGE PREPROCESSING
+# ===============================
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+# ===============================
+# MATERIAL PREDICTION
+# ===============================
+def predict_material(image_paths):
+
+    votes = []
+
+    for image_path in image_paths:
+
+        if not os.path.exists(image_path):
+            continue
+
+        image = Image.open(image_path).convert("RGB")
+
+        # ðŸ”¥ Use full image for stability
+        cropped = image
+
+        tensor = transform(cropped).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            outputs = material_model(tensor)
+            probs = torch.softmax(outputs, dim=1)
+            class_idx = torch.argmax(probs, dim=1).item()
+            confidence = probs[0][class_idx].item()
+
+        # ðŸ”¥ Stronger confidence threshold
+        if confidence >= 0.60:
+            predicted_material = MATERIAL_CLASSES[class_idx]
+            votes.append((predicted_material, confidence))
+
+    # No valid predictions
+    if not votes:
+        return {
+            "material": "unknown",
+            "confidence": 0.0
+        }
+
+    # Confidence-weighted voting
+    score_map = {}
+    for material, conf in votes:
+        score_map[material] = score_map.get(material, 0) + conf
+
+    final_material = max(score_map, key=score_map.get)
+    final_confidence = score_map[final_material] / len(votes)
+
+    # ðŸ”¥ Filter unwanted materials
+    if final_material not in ALLOWED_MATERIALS:
+        final_material = "unknown"
+
+    return {
+        "material": final_material,
+        "confidence": round(final_confidence, 2)
+    }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\llm_service.py =====
+
+import os
+import json
+from dotenv import load_dotenv
+from openai import OpenAI
+
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise ValueError("OPENAI_API_KEY not found")
+
+client = OpenAI(api_key=api_key)
+
+
+def generate_reuse_ideas(analysis_json: dict):
+
+    prompt = f"""
+You are an AI expert in reuse and sustainability.
+
+Detected objects:
+{analysis_json}
+
+Generate NEW reuse ideas.
+
+Categorize into:
+- Easy
+- Moderate
+- Very Hard
+
+Return JSON ONLY. No explanation text.
+
+Format:
+
+{{
+ "easy": [{{"title":"","description":"","youtube_query":""}}],
+ "moderate": [],
+ "very_hard": []
+}}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.9
+    )
+
+    content = response.choices[0].message.content
+
+    try:
+        return json.loads(content)
+    except:
+        return {
+            "easy": [],
+            "moderate": [],
+            "very_hard": []
+        }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\main.py =====
+
+from fastapi import FastAPI, UploadFile, File, Form
+import shutil
+import os
+from typing import List, Dict
+from backend.object_analysis import analyze_single_object
+
+# ðŸ”¹ NEW IMPORTS FOR AI
+from backend.llm_service import generate_reuse_ideas
+from backend.step_service import generate_steps
+
+app = FastAPI()
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+# =====================================================
+# EXISTING ENDPOINT (UNCHANGED)
+# =====================================================
+@app.post("/analyze-session")
+async def analyze_session(
+    files: List[UploadFile] = File(...),
+    object_ids: List[str] = Form(...),
+    view_types: List[str] = Form(...)
+):
+    print("\n===== ANALYZE SESSION CALLED =====")
+    print(f"Files received: {len(files)}")
+
+    object_groups: Dict[str, List[str]] = {}
+
+    for file, obj_id, view in zip(files, object_ids, view_types):
+        obj_dir = os.path.join(UPLOAD_DIR, obj_id)
+        os.makedirs(obj_dir, exist_ok=True)
+
+        filename = f"{view}_{file.filename}"
+        path = os.path.join(obj_dir, filename)
+
+        with open(path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        object_groups.setdefault(obj_id, []).append(path)
+
+    print("Received objects:")
+    for obj_id, paths in object_groups.items():
+        print(obj_id, len(paths))
+        for p in paths:
+            print(" ", p)
+
+    analyzed_objects = []
+
+    for obj_id, paths in object_groups.items():
+        analysis = analyze_single_object(paths)
+        if analysis:
+            analysis["object_id"] = obj_id
+            analyzed_objects.append(analysis)
+
+    return {
+        "objects": analyzed_objects,
+       
+    }
+
+
+# =====================================================
+# NEW AI ENDPOINT 1 â€” LLM Categorized Ideas
+# =====================================================
+@app.post("/generate-reuse-ai")
+async def generate_reuse_ai(data: dict):
+
+    print("\n===== LLM REUSE GENERATION CALLED =====")
+
+    result = generate_reuse_ideas(data)
+
+    return result
+
+
+# =====================================================
+# NEW AI ENDPOINT 2 â€” Detailed Step Generation
+# =====================================================
+@app.post("/generate-steps")
+async def generate_reuse_steps(data: dict):
+
+    idea = data.get("idea")
+
+    if not idea:
+        return {"error": "Idea title required"}
+
+    print(f"\n===== GENERATING STEPS FOR: {idea} =====")
+
+    steps = generate_steps(idea)
+
+    return steps
+
+
+# =====================================================
+# HEALTH CHECK
+# =====================================================
+@app.get("/")
+def health_check():
+    return {"status": "Backend is running"}
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\object_analysis.py =====
+
+from backend.object_detection import detect_object
+from backend.efficientnet_material import predict_material
+from backend.dimension_estimation import estimate_dimensions
+
+def analyze_single_object(image_paths):
+    # Object detection
+    object_name = detect_object(image_paths)
+    if not object_name:
+        return None
+
+    # Material detection
+    material_result = predict_material(image_paths)
+
+    # Dimensions (placeholder / AR later)
+    dimensions = estimate_dimensions(bbox_height_px=250)
+
+
+    return {
+        "object": object_name,
+        "material": material_result["material"],
+        "confidence": material_result["confidence"],
+        "dimensions": dimensions,
+        
+    }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\object_detection.py =====
+
+from ultralytics import YOLO
+from collections import Counter
+import os
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "yolov8l.pt")
+model = YOLO(MODEL_PATH)
+
+CONFIDENCE_THRESHOLD = 0.60
+
+ALLOWED_OBJECTS = [
+    "bottle", "cup", "bowl", "wine glass",
+    "chair", "couch", "bed", "dining table",
+    "tv", "laptop", "mouse", "remote", "keyboard",
+    "cell phone", "microwave", "oven", "toaster",
+    "refrigerator", "hair drier",
+    "book", "clock", "vase", "scissors",
+    "backpack", "suitcase", "umbrella", "handbag",
+    "fork", "knife", "spoon"
+]
+
+
+def detect_object(image_paths):
+
+    labels = []
+
+    for image_path in image_paths:
+        results = model(image_path, verbose=False)
+
+        for r in results:
+            if not r.boxes:
+                continue
+
+            for box in r.boxes:
+
+                conf = float(box.conf[0])
+                cls_id = int(box.cls[0])
+                label = model.names.get(cls_id)
+
+                if (
+                    conf >= CONFIDENCE_THRESHOLD
+                    and label in ALLOWED_OBJECTS
+                ):
+                    labels.append(label)
+
+    if not labels:
+        return "unknown"
+
+    return Counter(labels).most_common(1)[0][0]
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\step_service.py =====
+
+import os
+import json
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# Load environment variables
+load_dotenv()
+
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise ValueError("OPENAI_API_KEY not found. Check your .env file location.")
+
+client = OpenAI(api_key=api_key)
+
+
+def generate_steps(idea_title: str):
+    """
+    Generates structured step-by-step instructions
+    for a selected reuse idea.
+    """
+
+    prompt = f"""
+You are an expert DIY instructor.
+
+Create detailed, beginner-friendly step-by-step instructions for:
+
+{idea_title}
+
+For each step include:
+- step_number
+- instruction
+- tools_required
+- image_prompt (clear description for generating illustration image)
+
+Rules:
+- Keep steps realistic
+- Use simple tools
+- Make it safe
+- 5â€“8 steps maximum
+
+Return JSON ONLY in this format:
+
+[
+  {{
+    "step_number": 1,
+    "instruction": "",
+    "tools_required": "",
+    "image_prompt": ""
+  }}
+]
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7
+    )
+
+    content = response.choices[0].message.content
+
+    # Ensure valid JSON is returned
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        # If AI slightly misformats JSON, return raw text for debugging
+        return {
+            "error": "Invalid JSON returned by AI",
+            "raw_response": content
+        }
+
+
+===== C:\Users\LOQ\AndroidStudioProjects\RECREATE\backend\__init__.py =====
+

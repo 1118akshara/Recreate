@@ -7,17 +7,15 @@ import com.google.ar.sceneform.ux.ArFragment
 class CustomArFragment : ArFragment() {
 
     override fun getSessionConfiguration(session: Session): Config {
-        val config = Config(session)
 
-        // Detect horizontal & vertical surfaces (white dots)
+        val config = super.getSessionConfiguration(session)
+
         config.planeFindingMode =
             Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
 
-        // Allows placing points even if plane is not fully detected
         config.instantPlacementMode =
             Config.InstantPlacementMode.LOCAL_Y_UP
 
-        // Enable depth if device supports it
         config.depthMode =
             if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC))
                 Config.DepthMode.AUTOMATIC
@@ -25,6 +23,11 @@ class CustomArFragment : ArFragment() {
                 Config.DepthMode.DISABLED
 
         this.arSceneView.setupSession(session)
+
+        // 🔥 VERY IMPORTANT FOR WHITE DOTS
+        planeDiscoveryController.show()
+        planeDiscoveryController.setInstructionView(null)
+
         return config
     }
 }
