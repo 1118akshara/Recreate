@@ -16,6 +16,8 @@ class SplashActivity : AppCompatActivity() {
         Handler(Looper.getMainLooper()).postDelayed({
             startActivity(Intent(this, HomeActivity::class.java))
             finish()
-        }, 2000) // 2 seconds
+        }, 2000)
     }
+
+    // ❌ DO NOT put navigation inside onResume()
 }

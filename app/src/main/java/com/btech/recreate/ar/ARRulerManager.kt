@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.view.animation.LinearInterpolator
 import com.google.ar.core.HitResult
+import com.google.ar.core.Plane
 import com.google.ar.sceneform.AnchorNode
 import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.math.Quaternion
@@ -29,7 +30,16 @@ class ARRulerManager(
     private var lineNode: Node? = null
     private var glowAnimator: ValueAnimator? = null
 
+    private var markerSize = 0.008f
+
+    fun setMarkerSize(size: Float) {
+        markerSize = size
+    }
+
     fun addPoint(hitResult: HitResult) {
+
+        val trackable = hitResult.trackable
+        if (trackable !is Plane) return
 
         val anchor = hitResult.createAnchor()
         val anchorNode = AnchorNode(anchor)
@@ -39,8 +49,9 @@ class ARRulerManager(
             context,
             Color(android.graphics.Color.RED)
         ).thenAccept { material ->
+
             val sphere = ShapeFactory.makeSphere(
-                0.015f,
+                markerSize,
                 Vector3.zero(),
                 material
             )
@@ -57,13 +68,11 @@ class ARRulerManager(
 
     private fun drawLine() {
 
-        val start = firstAnchor!!.worldPosition
-        val end = secondAnchor!!.worldPosition
+        val start = firstAnchor?.worldPosition ?: return
+        val end = secondAnchor?.worldPosition ?: return
 
         val difference = Vector3.subtract(end, start)
-        val rawDistanceMeters = difference.length()
-
-        val distanceMeters = rawDistanceMeters.coerceAtLeast(0.001f)
+        val distanceMeters = difference.length().coerceAtLeast(0.001f)
         val distanceCm = distanceMeters * 100f
 
         val midpoint = Vector3.add(start, end).scaled(0.5f)
@@ -74,16 +83,17 @@ class ARRulerManager(
         ).thenAccept { material ->
 
             val cylinder = ShapeFactory.makeCylinder(
-                0.004f,
+                0.0035f,
                 distanceMeters,
                 Vector3.zero(),
                 material
             )
 
-            lineNode = Node()
-            lineNode!!.setParent(arFragment.arSceneView.scene)
-            lineNode!!.renderable = cylinder
-            lineNode!!.worldPosition = midpoint
+            lineNode = Node().apply {
+                setParent(arFragment.arSceneView.scene)
+                renderable = cylinder
+                worldPosition = midpoint
+            }
 
             val direction = difference.normalized()
             val rotation = Quaternion.rotationBetweenVectors(
@@ -91,7 +101,7 @@ class ARRulerManager(
                 direction
             )
 
-            lineNode!!.worldRotation = rotation
+            lineNode?.worldRotation = rotation
 
             startGlow(material)
         }
@@ -101,21 +111,21 @@ class ARRulerManager(
 
     private fun startGlow(material: Material) {
 
-        glowAnimator = ValueAnimator.ofFloat(0.5f, 1f)
-        glowAnimator?.duration = 1000
-        glowAnimator?.repeatMode = ValueAnimator.REVERSE
-        glowAnimator?.repeatCount = ValueAnimator.INFINITE
-        glowAnimator?.interpolator = LinearInterpolator()
+        glowAnimator = ValueAnimator.ofFloat(0.6f, 1f).apply {
+            duration = 800
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = LinearInterpolator()
 
-        glowAnimator?.addUpdateListener {
-            val value = it.animatedValue as Float
-            material.setFloat3("baseColorTint", value, value, 0f)
+            addUpdateListener {
+                val value = it.animatedValue as Float
+                material.setFloat3("baseColorTint", value, value, 0f)
+            }
+
+            start()
         }
-
-        glowAnimator?.start()
     }
 
-    // 🔥 THIS IS WHAT ARScanActivity NEEDS
     fun clearMeasurement() {
 
         glowAnimator?.cancel()

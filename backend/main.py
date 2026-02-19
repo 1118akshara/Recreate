@@ -55,23 +55,40 @@ async def analyze_session(request: Request):
 
             print("Saved:", file_path)
 
+            # 🔥 NEW: Get object type
+            object_type = form.get(f"object_type_{i}")
+
             height = form.get(f"height_cm_{i}")
             width = form.get(f"width_cm_{i}")
             depth = form.get(f"depth_cm_{i}")
+            diameter = form.get(f"diameter_cm_{i}")
 
+            print("Object Type:", object_type)
             print("Height:", height)
             print("Width:", width)
             print("Depth:", depth)
+            print("Diameter:", diameter)
 
             analysis = analyze_single_object([file_path])
 
             if analysis:
+
                 analysis["object_id"] = object_id
-                analysis["dimensions"] = {
-                    "height_cm": height,
-                    "width_cm": width,
-                    "depth_cm": depth
-                }
+                analysis["object_type"] = object_type
+
+                # 🔥 Cylindrical handling
+                if object_type == "CYLINDRICAL":
+                    analysis["dimensions"] = {
+                        "height_cm": height,
+                        "diameter_cm": diameter
+                    }
+                else:
+                    analysis["dimensions"] = {
+                        "height_cm": height,
+                        "width_cm": width,
+                        "depth_cm": depth
+                    }
+
                 analyzed_objects.append(analysis)
 
         return {
