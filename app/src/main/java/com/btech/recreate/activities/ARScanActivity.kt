@@ -14,9 +14,10 @@ import com.btech.recreate.ar.ARImageUtil
 import com.btech.recreate.ar.ARRulerManager
 import com.btech.recreate.data.ObjectScanSession
 import com.btech.recreate.data.ScanRepository
-import com.google.ar.core.Config
+
 import com.google.ar.core.Plane
-import com.google.ar.sceneform.ux.ArFragment
+
+import com.btech.recreate.ar.CustomArFragment
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
@@ -24,7 +25,7 @@ import java.util.UUID
 class ARScanActivity : AppCompatActivity(),
     ARRulerManager.MeasurementListener {
 
-    private lateinit var arFragment: ArFragment
+    private lateinit var arFragment: CustomArFragment
     private lateinit var txtInstruction: TextView
     private lateinit var txtObjectInfo: TextView
     private lateinit var txtLiveMeasurement: TextView
@@ -52,7 +53,7 @@ class ARScanActivity : AppCompatActivity(),
         objectCount = ScanRepository.scannedObjects.size + 1
 
         arFragment =
-            supportFragmentManager.findFragmentById(R.id.arFragment) as ArFragment
+            supportFragmentManager.findFragmentById(R.id.arFragment) as CustomArFragment
 
         txtInstruction = findViewById(R.id.txt_instruction)
         txtObjectInfo = findViewById(R.id.txt_object_info)
@@ -87,24 +88,7 @@ class ARScanActivity : AppCompatActivity(),
         updateUI()
     }
 
-    // 🔥 IMPORTANT: Autofocus + Better Lighting
-    override fun onResume() {
-        super.onResume()
 
-        arFragment.arSceneView.session?.let { session ->
-
-            val config = session.config
-
-            // Force continuous autofocus
-            config.focusMode = Config.FocusMode.AUTO
-
-            // Better lighting improves clarity
-            config.lightEstimationMode =
-                Config.LightEstimationMode.ENVIRONMENTAL_HDR
-
-            session.configure(config)
-        }
-    }
 
     private fun getMaxSteps(): Int {
         return when (objectType) {

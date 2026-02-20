@@ -10,15 +10,16 @@ class CustomArFragment : ArFragment() {
 
         val config = super.getSessionConfiguration(session)
 
+        // Keep only basic plane detection
         config.planeFindingMode =
             Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
 
-        if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-            config.depthMode = Config.DepthMode.AUTOMATIC
-        }
+        // Keep autofocus only
+        config.focusMode = Config.FocusMode.AUTO
 
-        // DO NOT call setupSession()
-        // DO NOT override getSessionFeatures()
+        // ❌ REMOVE HDR
+        // ❌ REMOVE Depth
+        // ❌ REMOVE any other config
 
         return config
     }
