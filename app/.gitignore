@@ -5,6 +5,7 @@ build/
 local.properties
 
 # Python
+venv/
 venv_gpu/
 __pycache__/
 *.pyc

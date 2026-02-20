@@ -2,131 +2,124 @@ package com.btech.recreate.activities
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
-import android.widget.*
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.cardview.widget.CardView
+import com.btech.recreate.R
 import com.btech.recreate.data.ScanRepository
 import com.btech.recreate.network.BackendApi
-import org.json.JSONObject
 
 class ScanSummaryActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_object_list)
 
-        val scrollView = ScrollView(this)
-        val rootLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(32, 32, 32, 32)
-        }
-        scrollView.addView(rootLayout)
+        val rootLayout = findViewById<LinearLayout>(R.id.rootLayout)
+        val btnScanNext = findViewById<Button>(R.id.btnScanNext)
+        val btnAnalyze = findViewById<Button>(R.id.btnAnalyze)
+        val btnReuse = findViewById<Button>(R.id.btnReuse)
+        val btnFinish = findViewById<Button>(R.id.btnFinish)
 
-        val title = TextView(this).apply {
-            text = "Scan Summary"
-            textSize = 22f
-        }
-        rootLayout.addView(title)
+        displaySavedObjects(rootLayout)
 
-        // 🔹 Display objects
-        ScanRepository.scannedObjects.forEachIndexed { index, obj ->
-
-            val card = CardView(this).apply {
-                radius = 24f
-                cardElevation = 12f
-                setContentPadding(32, 32, 32, 32)
-            }
-
-            val content = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-            }
-
-            val header = TextView(this).apply {
-                text = "Object ${index + 1}"
-                textSize = 18f
-            }
-
-            val dimensionText = TextView(this).apply {
-                text = """
-Height: ${"%.2f".format(obj.heightCm ?: 0f)} cm
-Width: ${"%.2f".format(obj.widthCm ?: 0f)} cm
-Depth: ${"%.2f".format(obj.depthCm ?: 0f)} cm
-                """.trimIndent()
-            }
-
-            content.addView(header)
-            content.addView(dimensionText)
-            card.addView(content)
-            rootLayout.addView(card)
+        // 🔥 Scan next object
+        btnScanNext.setOnClickListener {
+            startActivity(Intent(this, ARScanActivity::class.java))
         }
 
-        // 🔹 Loading status text
-        val loadingText = TextView(this).apply {
-            text = ""
-            textSize = 16f
-            setPadding(0, 24, 0, 24)
-        }
-        rootLayout.addView(loadingText)
+        // 🔥 AI Analysis (FIXED)
+        btnAnalyze.setOnClickListener {
 
-        val analyzeButton = Button(this).apply {
-            text = "Analyze Objects (AI)"
-            setOnClickListener {
+            if (ScanRepository.scannedObjects.isEmpty()) {
+                Toast.makeText(
+                    this,
+                    "No objects to analyze",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
 
-                if (ScanRepository.scannedObjects.isEmpty()) {
-                    Toast.makeText(
-                        this@ScanSummaryActivity,
-                        "No objects to analyze",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
-                }
+            Toast.makeText(
+                this,
+                "Uploading objects...",
+                Toast.LENGTH_SHORT
+            ).show()
 
-                loadingText.text = "Running YOLO + EfficientNet..."
+            BackendApi.uploadSession(
+                ScanRepository.scannedObjects
+            ) { result ->
 
-                BackendApi.uploadSession(
-                    ScanRepository.scannedObjects
-                ) { response ->
+                runOnUiThread {
 
-                    runOnUiThread {
-
-                        if (response == null) {
-                            loadingText.text = ""
-                            Toast.makeText(
-                                this@ScanSummaryActivity,
-                                "Server connection failed",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            return@runOnUiThread
-                        }
-
-                        Log.d("AI_RESPONSE", response)
-
-                        val json = JSONObject(response)
-
-                        if (!json.has("objects")) {
-                            loadingText.text = ""
-                            Toast.makeText(
-                                this@ScanSummaryActivity,
-                                "AI returned invalid result",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            return@runOnUiThread
-                        }
-
-                        loadingText.text = "AI Analysis Complete"
-
-                        val intent = Intent(
-                            this@ScanSummaryActivity,
-                            AnalysisResultActivity2::class.java
-                        )
-                        intent.putExtra("analysis_json", json.toString())
-                        startActivity(intent)
+                    if (result == null) {
+                        Toast.makeText(
+                            this,
+                            "Server connection failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@runOnUiThread
                     }
+
+                    val intent = Intent(
+                        this,
+                        AnalysisResultActivity2::class.java
+                    )
+
+                    intent.putExtra("analysis_result", result)
+                    startActivity(intent)
                 }
             }
         }
 
-        rootLayout.addView(analyzeButton)
-        setContentView(scrollView)
+        // 🔥 Reuse Suggestions
+        btnReuse.setOnClickListener {
+            startActivity(Intent(this, AIReuseSuggestionsActivity::class.java))
+        }
+
+        // 🔥 Finish Scan → Go Home
+        btnFinish.setOnClickListener {
+            ScanRepository.scannedObjects.clear()
+            startActivity(Intent(this, HomeActivity::class.java))
+            finish()
+        }
+    }
+
+    private fun displaySavedObjects(rootLayout: LinearLayout) {
+
+        val scannedObjects = ScanRepository.scannedObjects
+
+        scannedObjects.forEachIndexed { index, obj ->
+
+            val textView = TextView(this)
+            textView.textSize = 16f
+            textView.setPadding(0, 16, 0, 16)
+
+            val builder = StringBuilder()
+
+            builder.append("Object ${index + 1}\n")
+            builder.append("Height: %.2f cm\n".format(obj.heightCm))
+
+            when (obj.objectType) {
+
+                "VERY_FLAT" -> {
+                    builder.append("Width: %.2f cm\n".format(obj.widthCm))
+                }
+
+                "CYLINDRICAL" -> {
+                    builder.append("Diameter: %.2f cm\n".format(obj.widthCm))
+                }
+
+                else -> {
+                    builder.append("Width: %.2f cm\n".format(obj.widthCm))
+                    builder.append("Depth: %.2f cm\n".format(obj.depthCm))
+                }
+            }
+
+            textView.text = builder.toString()
+            rootLayout.addView(textView, rootLayout.childCount - 4)
+        }
     }
 }

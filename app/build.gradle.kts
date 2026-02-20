@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -48,8 +49,11 @@ dependencies {
        AR / SCANNING (KEEP AS IS)
      ----------------------------- */
     implementation("com.google.ar:core:1.43.0")
+    implementation("com.google.ar.sceneform:core:1.17.1")
     implementation("com.google.ar.sceneform.ux:sceneform-ux:1.17.1")
-
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("com.airbnb.android:lottie:6.0.0")
     /* -----------------------------
        ANDROID BASICS
      ----------------------------- */
@@ -75,6 +79,7 @@ dependencies {
        IMAGE LOADING (DALL·E – LATER)
      ----------------------------- */
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation(libs.firebase.firestore)
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
     /* -----------------------------

@@ -3,6 +3,7 @@ package com.btech.recreate.network
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -21,38 +22,64 @@ object BackendApi {
         onResult: (String?) -> Unit
     ) {
 
+        println("🔥 UPLOAD SESSION CALLED")
+        println("Objects: $objects")
+        println("Objects size: ${objects.size}")
+
+
         val multipart = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
 
         objects.forEachIndexed { index, obj ->
 
-            val file = File(obj.imagePath ?: return@forEachIndexed)
+            if (obj.imagePath.isNullOrEmpty()) return@forEachIndexed
+
+            val file = File(obj.imagePath!!)
             if (!file.exists()) return@forEachIndexed
 
-            val body =
+            val imageBody =
                 file.asRequestBody("image/jpeg".toMediaType())
 
-            // IMPORTANT: must match FastAPI
+            // 🔥 Image file
             multipart.addFormDataPart(
                 "files",
                 file.name,
-                body
+                imageBody
             )
 
+            // 🔥 Object type
+            multipart.addFormDataPart(
+                "object_type_$index",
+                obj.objectType ?: "CUBOIDAL"
+            )
+
+            // 🔥 Height always present
             multipart.addFormDataPart(
                 "height_cm_$index",
-                obj.heightCm?.toString() ?: ""
+                obj.heightCm.toString()
             )
 
-            multipart.addFormDataPart(
-                "width_cm_$index",
-                obj.widthCm?.toString() ?: ""
-            )
+            // 🔥 Cylindrical → height + diameter
+            if (obj.objectType == "CYLINDRICAL") {
 
-            multipart.addFormDataPart(
-                "depth_cm_$index",
-                obj.depthCm?.toString() ?: ""
-            )
+                multipart.addFormDataPart(
+                    "diameter_cm_$index",
+                    obj.widthCm.toString() // width holds diameter
+                )
+
+            } else {
+
+                // Flat / Cuboidal / VeryFlat
+                multipart.addFormDataPart(
+                    "width_cm_$index",
+                    obj.widthCm.toString()
+                )
+
+                multipart.addFormDataPart(
+                    "depth_cm_$index",
+                    obj.depthCm.toString()
+                )
+            }
         }
 
         val request = Request.Builder()
@@ -63,10 +90,16 @@ object BackendApi {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
                 onResult(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    onResult(null)
+                    return
+                }
+
                 onResult(response.body?.string())
             }
         })
@@ -81,10 +114,8 @@ object BackendApi {
         onResult: (String?) -> Unit
     ) {
 
-        val body = RequestBody.create(
-            "application/json".toMediaType(),
-            analysisJson
-        )
+        val body = analysisJson
+            .toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
             .url("${ServerConfig.BASE_URL}/generate-reuse-ai")
@@ -94,10 +125,16 @@ object BackendApi {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
                 onResult(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    onResult(null)
+                    return
+                }
+
                 onResult(response.body?.string())
             }
         })
@@ -115,10 +152,8 @@ object BackendApi {
         val json = JSONObject()
         json.put("idea", ideaTitle)
 
-        val body = RequestBody.create(
-            "application/json".toMediaType(),
-            json.toString()
-        )
+        val body = json.toString()
+            .toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
             .url("${ServerConfig.BASE_URL}/generate-steps")
@@ -128,10 +163,16 @@ object BackendApi {
         client.newCall(request).enqueue(object : Callback {
 
             override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
                 onResult(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    onResult(null)
+                    return
+                }
+
                 onResult(response.body?.string())
             }
         })

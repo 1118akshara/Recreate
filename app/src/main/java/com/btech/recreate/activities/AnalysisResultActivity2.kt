@@ -1,73 +1,85 @@
 package com.btech.recreate.activities
 
-import android.content.Intent
 import android.os.Bundle
-import android.widget.*
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.btech.recreate.network.BackendApi
-import org.json.JSONArray
+import com.btech.recreate.R
 import org.json.JSONObject
 
 class AnalysisResultActivity2 : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_analysis_result2)
 
-        val result = intent.getStringExtra("analysis_json") ?: return
-        val json = JSONObject(result)
-        val objects = json.optJSONArray("objects") ?: JSONArray()
+        val rootLayout = findViewById<LinearLayout>(R.id.resultRootLayout)
 
-        val scroll = ScrollView(this)
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(32, 32, 32, 32)
+        val jsonString = intent.getStringExtra("analysis_result")
+
+        if (jsonString == null) {
+            showMessage(rootLayout, "No analysis data received")
+            return
         }
-        scroll.addView(root)
 
-        for (i in 0 until objects.length()) {
+        try {
 
-            val obj = objects.getJSONObject(i)
+            val mainObject = JSONObject(jsonString)
 
-            val text = TextView(this).apply {
-                text = """
-Object ${i + 1}
-
-Name: ${obj.optString("object")}
-Material: ${obj.optString("material")}
-Confidence: ${"%.2f".format(obj.optDouble("confidence"))}
-
-Height: ${obj.getJSONObject("dimensions").optDouble("height_cm")} cm
-Width: ${obj.getJSONObject("dimensions").optDouble("width_cm")} cm
-Depth: ${obj.getJSONObject("dimensions").optDouble("depth_cm")} cm
-                """.trimIndent()
-                textSize = 16f
-                setPadding(0, 0, 0, 24)
+            if (!mainObject.getBoolean("success")) {
+                showMessage(rootLayout, "Backend returned failure")
+                return
             }
 
-            root.addView(text)
-        }
+            val objectsArray = mainObject.getJSONArray("objects")
 
-        val reuseButton = Button(this).apply {
-            text = "Generate Reuse Ideas"
-            setOnClickListener {
+            for (i in 0 until objectsArray.length()) {
 
-                BackendApi.generateAIReuseIdeas(result) { reuseResponse ->
-                    runOnUiThread {
-                        if (reuseResponse != null) {
-                            val intent = Intent(
-                                this@AnalysisResultActivity2,
-                                AIReuseSuggestionsActivity::class.java
-                            )
-                            intent.putExtra("reuse_json", reuseResponse)
-                            startActivity(intent)
-                        }
-                    }
+                val obj = objectsArray.getJSONObject(i)
+
+                val detectedObject = obj.optString("object", "Unknown")
+                val material = obj.optString("material", "Unknown")
+                val confidence = obj.optDouble("confidence", 0.0)
+                val objectType = obj.optString("object_type", "Unknown")
+
+                val dimensions = obj.getJSONObject("dimensions")
+
+                val resultText = TextView(this)
+                resultText.textSize = 16f
+                resultText.setPadding(0, 16, 0, 32)
+
+                val builder = StringBuilder()
+
+                builder.append("Object ${i + 1}\n\n")
+                builder.append("Detected Object: $detectedObject\n")
+                builder.append("Material: $material\n")
+                builder.append("Confidence: %.2f\n".format(confidence))
+                builder.append("Object Type: $objectType\n\n")
+                builder.append("Dimensions:\n")
+
+                val keys = dimensions.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    builder.append("$key : ${dimensions.getString(key)} cm\n")
                 }
+
+                builder.append("\n-----------------------------\n")
+
+                resultText.text = builder.toString()
+
+                rootLayout.addView(resultText)
             }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showMessage(rootLayout, "Error parsing analysis result")
         }
+    }
 
-        root.addView(reuseButton)
-
-        setContentView(scroll)
+    private fun showMessage(layout: LinearLayout, message: String) {
+        val textView = TextView(this)
+        textView.textSize = 18f
+        textView.text = message
+        layout.addView(textView)
     }
 }

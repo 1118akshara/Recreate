@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "369994472143",
+    "project_id": "recreate-4ad4e",
+    "storage_bucket": "recreate-4ad4e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:369994472143:android:5ba164319ce3414c85b5ba",
+        "android_client_info": {
+          "package_name": "com.btech.recreate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCW-R-CMwAL-4OjVQ6OL4HoX7Z5kDzBWq4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

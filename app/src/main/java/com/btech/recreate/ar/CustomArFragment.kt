@@ -13,20 +13,12 @@ class CustomArFragment : ArFragment() {
         config.planeFindingMode =
             Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
 
-        config.instantPlacementMode =
-            Config.InstantPlacementMode.LOCAL_Y_UP
+        if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+            config.depthMode = Config.DepthMode.AUTOMATIC
+        }
 
-        config.depthMode =
-            if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC))
-                Config.DepthMode.AUTOMATIC
-            else
-                Config.DepthMode.DISABLED
-
-        this.arSceneView.setupSession(session)
-
-        // 🔥 VERY IMPORTANT FOR WHITE DOTS
-        planeDiscoveryController.show()
-        planeDiscoveryController.setInstructionView(null)
+        // DO NOT call setupSession()
+        // DO NOT override getSessionFeatures()
 
         return config
     }
