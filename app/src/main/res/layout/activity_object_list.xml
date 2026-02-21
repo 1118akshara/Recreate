@@ -1,54 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#E8F5E9"
+    android:padding="16dp">
 
+    <!-- Top Buttons Section -->
     <LinearLayout
-        android:id="@+id/rootLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
-
-        <TextView
-            android:id="@+id/titleText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Saved Objects"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Objects will be added dynamically here -->
+        android:layout_marginBottom="20dp">
 
         <Button
             android:id="@+id/btnScanNext"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="50dp"
             android:text="Scan Next Object"
-            android:layout_marginTop="24dp"/>
+            android:textAllCaps="false"
+            android:backgroundTint="#2E7D32"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="12dp"/>
 
         <Button
             android:id="@+id/btnAnalyze"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Analyze Objects (AI)"
-            android:layout_marginTop="12dp"/>
-
-        <Button
-            android:id="@+id/btnReuse"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Reuse Suggestions"
-            android:layout_marginTop="12dp"/>
-
-        <Button
-            android:id="@+id/btnFinish"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Finish Scan"
-            android:layout_marginTop="12dp"/>
-
+            android:layout_height="50dp"
+            android:text="Analyze Objects"
+            android:textAllCaps="false"
+            android:backgroundTint="#43A047"
+            android:textColor="@android:color/white"/>
     </LinearLayout>
 
-</ScrollView>
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your Scanned Objects"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#1B5E20"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Object List -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/rootLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+    </ScrollView>
+
+</LinearLayout>

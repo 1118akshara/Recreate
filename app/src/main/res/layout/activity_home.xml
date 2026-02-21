@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F3F4F6">
+    android:background="#F1F8E9">
 
     <!-- Scroll Content -->
     <ScrollView
@@ -36,14 +36,14 @@
                         android:text="recreate"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="#111827"/>
+                        android:textColor="#1B5E20"/>
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Welcome back, User"
                         android:textSize="14sp"
-                        android:textColor="#6B7280"
+                        android:textColor="#4CAF50"
                         android:layout_marginTop="4dp"/>
                 </LinearLayout>
 
@@ -54,7 +54,7 @@
                     android:background="@drawable/avatar_bg"
                     android:text="U"
                     android:textStyle="bold"
-                    android:textColor="#4F46E5"
+                    android:textColor="#2E7D32"
                     android:textSize="18sp"/>
             </LinearLayout>
 
@@ -63,7 +63,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 android:layout_marginTop="32dp"
-                android:background="@drawable/hero_card_bg"
+                android:background="@drawable/hero_card_bg_green"
                 android:padding="24dp"
                 android:orientation="vertical">
 
@@ -80,7 +80,7 @@
                     android:layout_height="wrap_content"
                     android:text="Scan it now to see what you can build today."
                     android:textSize="14sp"
-                    android:textColor="#E0E7FF"
+                    android:textColor="#E8F5E9"
                     android:layout_marginTop="8dp"/>
 
                 <Button
@@ -90,7 +90,7 @@
                     android:text="Start Scan"
                     android:layout_marginTop="24dp"
                     android:backgroundTint="#FFFFFF"
-                    android:textColor="#4F46E5"/>
+                    android:textColor="#2E7D32"/>
             </LinearLayout>
 
             <!-- STATS -->
@@ -105,7 +105,7 @@
                     android:layout_width="0dp"
                     android:layout_height="100dp"
                     android:layout_weight="1"
-                    android:background="@drawable/stat_card_bg"
+                    android:background="@drawable/stat_card_bg_green"
                     android:padding="16dp"
                     android:orientation="vertical">
 
@@ -114,14 +114,15 @@
                         android:layout_height="wrap_content"
                         android:text="12"
                         android:textSize="22sp"
-                        android:textStyle="bold"/>
+                        android:textStyle="bold"
+                        android:textColor="#1B5E20"/>
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Saved Ideas"
                         android:textSize="12sp"
-                        android:textColor="#6B7280"/>
+                        android:textColor="#4CAF50"/>
                 </LinearLayout>
 
                 <LinearLayout
@@ -129,7 +130,7 @@
                     android:layout_height="100dp"
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
-                    android:background="@drawable/stat_card_bg"
+                    android:background="@drawable/stat_card_bg_green"
                     android:padding="16dp"
                     android:orientation="vertical">
 
@@ -139,17 +140,28 @@
                         android:text="4"
                         android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="#4F46E5"/>
+                        android:textColor="#2E7D32"/>
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Completed"
                         android:textSize="12sp"
-                        android:textColor="#6B7280"/>
+                        android:textColor="#4CAF50"/>
                 </LinearLayout>
             </LinearLayout>
-
+            <Button
+                android:id="@+id/btn_saved_projects"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:text="View Saved Projects"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:backgroundTint="#2E7D32"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="24dp"
+                android:elevation="4dp"/>
         </LinearLayout>
     </ScrollView>
 
@@ -169,35 +181,32 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Home"/>
+            android:text="Home"
+            android:textColor="#2E7D32"/>
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Scan"/>
+            android:text="Scan"
+            android:textColor="#2E7D32"/>
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Saved"/>
+            android:text="Saved"
+            android:textColor="#2E7D32"/>
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="Profile"/>
-        <Button
-            android:id="@+id/btn_saved"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Saved Projects"/>
-
-
+            android:text="Profile"
+            android:textColor="#2E7D32"/>
     </LinearLayout>
 
 </RelativeLayout>

@@ -25,7 +25,7 @@
         android:icon="@drawable/recreate_logo"
         android:label="RECREATE"
         android:supportsRtl="true"
-        android:theme="@style/Theme.RECREATE"
+        android:theme="@style/Theme.Recreate"
         android:usesCleartextTraffic="true">
 
 
@@ -50,7 +50,9 @@
         <activity
             android:name=".activities.HomeActivity"
             android:exported="false" />
-
+        <activity
+            android:name=".activities.SavedProjectsActivity"
+            android:exported="false" />
         <!-- AR Scan -->
         <activity
             android:name=".activities.ARScanActivity"

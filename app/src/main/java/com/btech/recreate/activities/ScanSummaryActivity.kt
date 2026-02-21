@@ -20,8 +20,7 @@ class ScanSummaryActivity : AppCompatActivity() {
         val rootLayout = findViewById<LinearLayout>(R.id.rootLayout)
         val btnScanNext = findViewById<Button>(R.id.btnScanNext)
         val btnAnalyze = findViewById<Button>(R.id.btnAnalyze)
-        val btnReuse = findViewById<Button>(R.id.btnReuse)
-        val btnFinish = findViewById<Button>(R.id.btnFinish)
+
 
         displaySavedObjects(rootLayout)
 
@@ -74,17 +73,8 @@ class ScanSummaryActivity : AppCompatActivity() {
             }
         }
 
-        // 🔥 Reuse Suggestions
-        btnReuse.setOnClickListener {
-            startActivity(Intent(this, AIReuseSuggestionsActivity::class.java))
-        }
 
-        // 🔥 Finish Scan → Go Home
-        btnFinish.setOnClickListener {
-            ScanRepository.scannedObjects.clear()
-            startActivity(Intent(this, HomeActivity::class.java))
-            finish()
-        }
+
     }
 
     private fun displaySavedObjects(rootLayout: LinearLayout) {
@@ -93,9 +83,41 @@ class ScanSummaryActivity : AppCompatActivity() {
 
         scannedObjects.forEachIndexed { index, obj ->
 
-            val textView = TextView(this)
-            textView.textSize = 16f
-            textView.setPadding(0, 16, 0, 16)
+            // 🔥 Card container
+            val card = LinearLayout(this)
+            card.orientation = LinearLayout.HORIZONTAL
+            card.setPadding(20, 20, 20, 20)
+            card.setBackgroundColor(0xFFFFFFFF.toInt())
+
+            val cardParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            cardParams.setMargins(0, 0, 0, 20)
+            card.layoutParams = cardParams
+
+            // 🔥 Small Image
+            val imageView = android.widget.ImageView(this)
+            val imageParams = LinearLayout.LayoutParams(200, 200)
+            imageParams.setMargins(0, 0, 20, 0)
+            imageView.layoutParams = imageParams
+            imageView.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+
+            if (!obj.imagePath.isNullOrEmpty()) {
+                val file = java.io.File(obj.imagePath!!)
+                if (file.exists()) {
+                    imageView.setImageURI(android.net.Uri.fromFile(file))
+                }
+            }
+
+            // 🔥 Text container (Vertical)
+            val textContainer = LinearLayout(this)
+            textContainer.orientation = LinearLayout.VERTICAL
+            textContainer.layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
 
             val builder = StringBuilder()
 
@@ -103,23 +125,30 @@ class ScanSummaryActivity : AppCompatActivity() {
             builder.append("Height: %.2f cm\n".format(obj.heightCm))
 
             when (obj.objectType) {
-
                 "VERY_FLAT" -> {
                     builder.append("Width: %.2f cm\n".format(obj.widthCm))
                 }
-
                 "CYLINDRICAL" -> {
                     builder.append("Diameter: %.2f cm\n".format(obj.widthCm))
                 }
-
                 else -> {
                     builder.append("Width: %.2f cm\n".format(obj.widthCm))
                     builder.append("Depth: %.2f cm\n".format(obj.depthCm))
                 }
             }
 
+            val textView = TextView(this)
             textView.text = builder.toString()
-            rootLayout.addView(textView, rootLayout.childCount - 4)
+            textView.textSize = 15f
+            textView.setTextColor(0xFF1B5E20.toInt())
+
+            textContainer.addView(textView)
+
+            // Add image + text to card
+            card.addView(imageView)
+            card.addView(textContainer)
+
+            rootLayout.addView(card)
         }
     }
 }

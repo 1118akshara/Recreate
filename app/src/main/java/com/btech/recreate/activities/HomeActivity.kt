@@ -17,10 +17,14 @@ class HomeActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_scan).setOnClickListener {
             startActivity(Intent(this, ARScanActivity::class.java))
         }
+        val btnSavedProjects = findViewById<Button>(R.id.btn_saved_projects)
 
-        findViewById<Button>(R.id.btn_saved).setOnClickListener {
-            startActivity(Intent(this, SavedProjectsActivity::class.java))
+        btnSavedProjects.setOnClickListener {
+            val intent = Intent(this, SavedProjectsActivity::class.java)
+            startActivity(intent)
         }
+
+
 
     }
 }
