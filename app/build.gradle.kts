@@ -1,9 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.google.gms.google.services)
+    id("com.google.gms.google-services")
 }
-
 android {
     namespace = "com.btech.recreate"
 
@@ -79,11 +78,19 @@ dependencies {
        IMAGE LOADING (DALL·E – LATER)
      ----------------------------- */
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation(libs.firebase.firestore)
+
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 
     /* -----------------------------
        LIFECYCLE (SAFE UI UPDATES)
      ----------------------------- */
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
+
+    /* -----------------------------
+   FIREBASE
+----------------------------- */
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
+
 }

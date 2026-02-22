@@ -53,6 +53,9 @@
         <activity
             android:name=".activities.SavedProjectsActivity"
             android:exported="false" />
+        <activity
+            android:name=".activities.UserGuidelinesActivity"
+            android:exported="false" />
         <!-- AR Scan -->
         <activity
             android:name=".activities.ARScanActivity"
