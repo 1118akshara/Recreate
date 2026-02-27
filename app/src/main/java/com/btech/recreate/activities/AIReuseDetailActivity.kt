@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.btech.recreate.R
 import com.btech.recreate.network.BackendApi
@@ -39,45 +38,72 @@ class AIReuseDetailActivity : AppCompatActivity() {
                 progressBar.visibility = View.GONE
 
                 if (result == null) {
-                    txtSteps.text = "Failed to load instructions"
+                    txtSteps.text = "Network error while loading instructions"
                     return@runOnUiThread
                 }
 
                 try {
 
+                    println("STEP FULL RESPONSE: $result")
+
                     val json = JSONObject(result)
 
-                    val stepsObject = json.optJSONObject("steps")
-
-                    if (stepsObject == null) {
-                        txtSteps.text = "No instructions generated"
+                    if (!json.optBoolean("success", false)) {
+                        txtSteps.text = "Step generation failed"
                         return@runOnUiThread
                     }
 
-                    val materials = stepsObject.optJSONArray("required_materials") ?: JSONArray()
-                    val stepsArray = stepsObject.optJSONArray("steps") ?: JSONArray()
+                    val stepsData = json.opt("steps")
+
+                    var materialsArray = JSONArray()
+                    var stepsArray = JSONArray()
+
+                    // ✅ Handle both possible formats safely
+                    if (stepsData is JSONObject) {
+
+                        materialsArray = stepsData.optJSONArray("required_materials") ?: JSONArray()
+                        stepsArray = stepsData.optJSONArray("steps") ?: JSONArray()
+
+                    } else if (stepsData is JSONArray) {
+
+                        // fallback if backend accidentally returns list
+                        stepsArray = stepsData
+                    }
 
                     val builder = StringBuilder()
 
-                    if (materials.length() > 0) {
+                    if (materialsArray.length() > 0) {
+
                         builder.append("Required Materials:\n\n")
-                        for (i in 0 until materials.length()) {
-                            builder.append("• ${materials.getString(i)}\n")
+
+                        for (i in 0 until materialsArray.length()) {
+                            builder.append("• ")
+                            builder.append(materialsArray.get(i).toString())
+                            builder.append("\n")
                         }
+
                         builder.append("\n")
                     }
 
                     builder.append("Step-by-Step Instructions:\n\n")
 
                     for (i in 0 until stepsArray.length()) {
-                        val step = stepsArray.getJSONObject(i)
 
-                        builder.append("Step ${step.optInt("step_number", i + 1)}:\n")
-                        builder.append("${step.optString("instruction", "")}\n\n")
+                        val stepObj = stepsArray.optJSONObject(i)
+
+                        if (stepObj != null) {
+                            builder.append("Step ${stepObj.optInt("step_number", i + 1)}:\n")
+                            builder.append(stepObj.optString("instruction", ""))
+                            builder.append("\n\n")
+                        } else {
+                            builder.append("Step ${i + 1}:\n")
+                            builder.append(stepsArray.get(i).toString())
+                            builder.append("\n\n")
+                        }
                     }
 
                     if (stepsArray.length() == 0) {
-                        builder.append("Instructions could not be generated.")
+                        builder.append("No instructions were generated.")
                     }
 
                     txtSteps.text = builder.toString()

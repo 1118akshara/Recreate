@@ -11,8 +11,11 @@ import com.btech.recreate.data.ObjectScanSession
 import org.json.JSONArray
 object BackendApi {
 
-    private val client = OkHttpClient()
-
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
     /* ==========================================================
        1️⃣ UPLOAD SESSION (YOLO + EfficientNet)
      ========================================================== */
