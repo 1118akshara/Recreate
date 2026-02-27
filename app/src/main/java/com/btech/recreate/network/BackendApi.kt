@@ -8,7 +8,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import com.btech.recreate.data.ObjectScanSession
-
+import org.json.JSONArray
 object BackendApi {
 
     private val client = OkHttpClient()
@@ -114,7 +114,13 @@ object BackendApi {
         onResult: (String?) -> Unit
     ) {
 
-        val body = analysisJson
+        val original = JSONObject(analysisJson)
+        val objects = original.getJSONArray("objects")
+
+        val requestJson = JSONObject()
+        requestJson.put("objects", objects)
+
+        val body = requestJson.toString()
             .toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
@@ -130,12 +136,23 @@ object BackendApi {
             }
 
             override fun onResponse(call: Call, response: Response) {
+
                 if (!response.isSuccessful) {
                     onResult(null)
                     return
                 }
 
-                onResult(response.body?.string())
+                val responseBody = response.body
+                if (responseBody == null) {
+                    onResult(null)
+                    return
+                }
+
+                val bodyString = responseBody.string()
+
+                println("AI RESPONSE: $bodyString")
+
+                onResult(bodyString)
             }
         })
     }
@@ -143,38 +160,66 @@ object BackendApi {
     /* ==========================================================
        3️⃣ GENERATE STEPS
      ========================================================== */
-
     fun generateSteps(
         ideaTitle: String,
+        analysisJson: String,
         onResult: (String?) -> Unit
     ) {
 
-        val json = JSONObject()
-        json.put("idea", ideaTitle)
+        try {
 
-        val body = json.toString()
-            .toRequestBody("application/json".toMediaType())
+            val original = JSONObject(analysisJson)
+            val objects = original.optJSONArray("objects") ?: JSONArray()
 
-        val request = Request.Builder()
-            .url("${ServerConfig.BASE_URL}/generate-steps")
-            .post(body)
-            .build()
+            val requestJson = JSONObject()
+            requestJson.put("idea_title", ideaTitle)
+            requestJson.put("objects", objects)
 
-        client.newCall(request).enqueue(object : Callback {
+            val body = requestJson.toString()
+                .toRequestBody("application/json".toMediaType())
 
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
-                onResult(null)
-            }
+            val request = Request.Builder()
+                .url("${ServerConfig.BASE_URL}/generate-steps")
+                .post(body)
+                .build()
 
-            override fun onResponse(call: Call, response: Response) {
-                if (!response.isSuccessful) {
+            client.newCall(request).enqueue(object : Callback {
+
+                override fun onFailure(call: Call, e: IOException) {
+                    e.printStackTrace()
+                    println("❌ STEP NETWORK FAILURE: ${e.message}")
                     onResult(null)
-                    return
                 }
 
-                onResult(response.body?.string())
-            }
-        })
+                override fun onResponse(call: Call, response: Response) {
+
+                    println("✅ STEP RESPONSE CODE: ${response.code}")
+
+                    if (!response.isSuccessful) {
+                        println("❌ HTTP ERROR")
+                        onResult(null)
+                        return
+                    }
+
+                    val bodyString = response.body?.string()
+
+                    println("📦 STEP RAW BODY: $bodyString")
+
+                    if (bodyString.isNullOrEmpty()) {
+                        println("❌ EMPTY BODY")
+                        onResult(null)
+                        return
+                    }
+
+                    onResult(bodyString)
+                }
+            })
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("❌ JSON BUILD ERROR: ${e.message}")
+            onResult(null)
+        }
     }
 }
+

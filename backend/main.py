@@ -4,8 +4,8 @@ import shutil
 import os
 
 from backend.object_analysis import analyze_single_object
-from backend.llm_service import generate_reuse_ideas
-from backend.step_service import generate_steps
+from backend.services.reuse_service import generate_reuse
+from backend.services.step_service import generate_steps
 
 print("🔥 THIS BACKEND VERSION IS RUNNING")
 
@@ -55,19 +55,11 @@ async def analyze_session(request: Request):
 
             print("Saved:", file_path)
 
-            # 🔥 NEW: Get object type
             object_type = form.get(f"object_type_{i}")
-
             height = form.get(f"height_cm_{i}")
             width = form.get(f"width_cm_{i}")
             depth = form.get(f"depth_cm_{i}")
             diameter = form.get(f"diameter_cm_{i}")
-
-            print("Object Type:", object_type)
-            print("Height:", height)
-            print("Width:", width)
-            print("Depth:", depth)
-            print("Diameter:", diameter)
 
             analysis = analyze_single_object([file_path])
 
@@ -76,7 +68,6 @@ async def analyze_session(request: Request):
                 analysis["object_id"] = object_id
                 analysis["object_type"] = object_type
 
-                # 🔥 Cylindrical handling
                 if object_type == "CYLINDRICAL":
                     analysis["dimensions"] = {
                         "height_cm": height,
@@ -107,39 +98,70 @@ async def analyze_session(request: Request):
             }
         )
 
-
 # =====================================================
-# AI REUSE IDEAS
+# AI REUSE IDEAS (LLM)
 # =====================================================
 @app.post("/generate-reuse-ai")
 async def generate_reuse_ai(data: dict):
 
     print("\n===== LLM REUSE GENERATION CALLED =====")
 
-    result = generate_reuse_ideas(data)
-    return result
+    objects = data.get("objects")
 
+    if not objects:
+        return {
+            "success": False,
+            "error": "No objects provided"
+        }
 
+    try:
+        result = generate_reuse(objects)
+        print("LLM RESULT:", result)
+        response = {
+            "success": True,
+            "easy": result.get("easy", []),
+            "moderate": result.get("moderate", []),
+            "advanced": result.get("advanced", [])
+        }
+
+        print("Sending to Android:", response)
+
+        return response
+
+    except Exception as e:
+        print("🔥 REUSE ERROR:", str(e))
+        return {
+            "success": False,
+            "error": str(e)
+        }
 # =====================================================
-# STEP GENERATION
+# STEP GENERATION (LLM)
 # =====================================================
 @app.post("/generate-steps")
 async def generate_reuse_steps(data: dict):
 
-    idea = data.get("idea")
+    print("\n===== STEP GENERATION CALLED =====")
 
-    if not idea:
-        return {"error": "Idea title required"}
+    idea_title = data.get("idea_title")
+    objects = data.get("objects")
 
-    print(f"\n===== GENERATING STEPS FOR: {idea} =====")
+    if not idea_title:
+        return {
+            "success": False,
+            "error": "Idea title required"
+        }
 
-    steps = generate_steps(idea)
-    return steps
+    try:
+        steps = generate_steps(idea_title, objects)
+        print("STEPS :", steps)
+        return {
+            "success": True,
+            "steps": steps
+        }
 
-
-# =====================================================
-# HEALTH CHECK
-# =====================================================
-@app.get("/")
-def health_check():
-    return {"status": "Backend is running"}
+    except Exception as e:
+        print("🔥 STEP ERROR:", str(e))
+        return {
+            "success": False,
+            "error": str(e)
+        }

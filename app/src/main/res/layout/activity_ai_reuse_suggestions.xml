@@ -1,72 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAFAFA"
+    android:orientation="vertical"
+    android:background="#F5F7FA"
     android:padding="16dp">
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
+    <!-- EASY -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Easy Ideas"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:textColor="#2E7D32"
+        android:layout_marginBottom="8dp"/>
 
-    <LinearLayout
-        android:orientation="vertical"
+    <ListView
+        android:id="@+id/listEasy"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:dividerHeight="8dp"/>
 
-        <!-- PAGE TITLE -->
-        <TextView
-            android:id="@+id/txtTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Reuse Suggestions"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#212121"
-            android:paddingBottom="16dp"/>
+    <!-- MODERATE -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Moderate Ideas"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:textColor="#F57C00"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"/>
 
-        <!-- EASY -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Easy"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#2E7D32"/>
+    <ListView
+        android:id="@+id/listModerate"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:dividerHeight="8dp"/>
 
-        <ListView
-            android:id="@+id/listEasy"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:dividerHeight="8dp"/>
+    <!-- ADVANCED -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Advanced Ideas"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:textColor="#C62828"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"/>
 
-        <!-- MODERATE -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Moderate"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#2E7D32"
-            android:layout_marginTop="16dp"/>
+    <ListView
+        android:id="@+id/listAdvanced"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:dividerHeight="8dp"/>
 
-        <ListView
-            android:id="@+id/listModerate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:dividerHeight="8dp"/>
-
-        <!-- VERY HARD -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Very Hard"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#2E7D32"
-            android:layout_marginTop="16dp"/>
-
-        <ListView
-            android:id="@+id/listHard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:dividerHeight="8dp"/>
-
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>
