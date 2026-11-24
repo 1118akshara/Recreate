@@ -177,7 +177,7 @@ Example:
 
 Explore our complete final-year project presentation, covering the problem statement, objectives, methodology, system architecture, implementation, and results.
 
-📄 **[View Final Project Presentation](docs/RECREATE_Final_Presentation.pdf)**
+📄 **[View Final Project Presentation]([docs/RECREATE_Final_Presentation.pdf](https://github.com/1118akshara/Recreate/blob/main/docs/RECREATE_Final_Presentation.pdf))**
 
 ## Project Structure
 
